@@ -1,0 +1,16 @@
+# Core dependencies for BSV Django Middleware
+
+# Django framework
+django>=3.2.0,<5.0.0
+
+# Type definitions and validation
+pydantic>=1.8.0,<3.0.0
+typing-extensions>=4.0.0
+
+# BSV SDK dependency (development branch)
+# Use local py-sdk with auth/certificates branch
+-e ../py-sdk
+
+# Optional dependencies for enhanced functionality
+# requests>=2.25.0  # For HTTP client functionality
+# cryptography>=3.4.0  # For additional crypto operations
