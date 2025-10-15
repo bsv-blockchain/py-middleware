@@ -7,17 +7,24 @@ WalletInterface に適合させるためのアダプター層を提供します�
 Phase 2.1 Day 2: 実際の統合実装
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, TYPE_CHECKING
 import logging
 
-try:
+# Import WalletInterface with proper type checking support
+PY_SDK_AVAILABLE = False  # Initialize before conditional import
+
+if TYPE_CHECKING:
+    # For type checking, always import the real type
     from bsv.wallet.wallet_interface import WalletInterface
-    PY_SDK_AVAILABLE = True
-except ImportError:
-    # py-sdk が利用できない場合のダミー
-    class WalletInterface:
-        pass
-    PY_SDK_AVAILABLE = False
+else:
+    # At runtime, try to import, fall back to Any if not available
+    try:
+        from bsv.wallet.wallet_interface import WalletInterface
+        PY_SDK_AVAILABLE = True
+    except ImportError:
+        # Use Any for runtime when py-sdk is not available
+        WalletInterface = Any  # type: ignore
+        PY_SDK_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +40,13 @@ class MiddlewareWalletAdapter(WalletInterface):
         simple_wallet: MockTestWallet や他の簡単なwallet実装
     """
     
-    def __init__(self, simple_wallet):
+    def __init__(self, simple_wallet: Any) -> None:
         self.simple_wallet = simple_wallet
         logger.debug(f"WalletAdapter initialized with {type(simple_wallet).__name__}")
     
     # === 重要なメソッド (middleware で使用) ===
     
-    def get_public_key(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def get_public_key(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """
         py-sdk format: get_public_key(ctx, args, originator)
         simple format: get_public_key() -> str
@@ -54,16 +61,16 @@ class MiddlewareWalletAdapter(WalletInterface):
             pub_key_obj = PublicKey(pub_key_hex)
             
             class PublicKeyResult:
-                def __init__(self, hex_key, pub_key_obj):
+                def __init__(self, hex_key: str, pub_key_obj: Any) -> None:
                     self.publicKey = hex_key  # for test compatibility
                     self.public_key = pub_key_obj  # for py-sdk Peer compatibility
                     self.hex = hex_key
                     
-                def __contains__(self, item):
+                def __contains__(self, item: str) -> bool:
                     # Support 'publicKey' in result for test compatibility
                     return item in ['publicKey', 'public_key', 'hex']
                 
-                def __getitem__(self, key):
+                def __getitem__(self, key: str) -> Any:
                     # Support result['publicKey'] for test compatibility
                     if key == 'publicKey':
                         return self.publicKey
@@ -80,7 +87,7 @@ class MiddlewareWalletAdapter(WalletInterface):
             logger.error(f"get_public_key error: {e}")
             raise
     
-    def create_signature(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def create_signature(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """
         py-sdk format: create_signature(ctx, args, originator)
         simple format: sign_message(message: bytes) -> bytes
@@ -121,16 +128,16 @@ class MiddlewareWalletAdapter(WalletInterface):
             
             # Return object with signature attribute for py-sdk Peer compatibility
             class SignatureResult:
-                def __init__(self, sig, alg, proto):
+                def __init__(self, sig: bytes, alg: str, proto: str) -> None:
                     self.signature = sig  # for py-sdk Peer compatibility
                     self.algorithm = alg
                     self.protocol = proto
                     
-                def __contains__(self, item):
+                def __contains__(self, item: str) -> bool:
                     # Support 'signature' in result for test compatibility
                     return item in ['signature', 'algorithm', 'protocol']
                 
-                def __getitem__(self, key):
+                def __getitem__(self, key: str) -> Any:
                     # Support result['signature'] for test compatibility
                     if key == 'signature':
                         return self.signature
@@ -151,7 +158,7 @@ class MiddlewareWalletAdapter(WalletInterface):
             traceback.print_exc()
             raise
     
-    def internalize_action(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def internalize_action(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """
         py-sdk format: internalize_action(ctx, args, originator)
         simple format: internalize_action(action: dict) -> dict
@@ -183,34 +190,34 @@ class MiddlewareWalletAdapter(WalletInterface):
     
     # === その他の必須抽象メソッド (基本実装) ===
     
-    def encrypt(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def encrypt(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """暗号化 - 現在の簡単なウォレットでは未実装"""
         logger.warning("encrypt method called but not implemented in simple wallet")
         raise NotImplementedError("encrypt not implemented in simple wallet")
     
-    def decrypt(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def decrypt(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """復号化 - 現在の簡単なウォレットでは未実装"""
         logger.warning("decrypt method called but not implemented in simple wallet")
         raise NotImplementedError("decrypt not implemented in simple wallet")
     
-    def create_hmac(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def create_hmac(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """HMAC作成 - 基本的な署名で代用"""
         logger.warning("create_hmac called, using signature instead")
         return self.create_signature(ctx, args, originator)
     
-    def verify_hmac(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def verify_hmac(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """HMAC検証 - 簡易実装"""
         logger.warning("verify_hmac called, returning True (simplified)")
         return {'valid': True}
     
-    def verify_signature(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def verify_signature(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """署名検証 - 簡易実装"""
         logger.debug("verify_signature called")
         return {'valid': True}
     
     # === Wallet操作系メソッド ===
     
-    def create_action(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def create_action(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """アクション作成 - 簡易実装"""
         logger.debug(f"create_action: args={args}")
         return {
@@ -219,7 +226,7 @@ class MiddlewareWalletAdapter(WalletInterface):
             'actionId': 'mock_action_id'
         }
     
-    def sign_action(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def sign_action(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """アクション署名 - 簡易実装"""
         logger.debug(f"sign_action: args={args}")
         return {
@@ -227,60 +234,60 @@ class MiddlewareWalletAdapter(WalletInterface):
             'actionId': args.get('actionId', 'unknown')
         }
     
-    def abort_action(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def abort_action(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """アクション中止 - 簡易実装"""
         logger.debug(f"abort_action: args={args}")
         return {'aborted': True}
     
-    def list_actions(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def list_actions(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """アクション一覧 - 空リスト返却"""
         return {'actions': []}
     
-    def list_outputs(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def list_outputs(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """出力一覧 - 空リスト返却"""
         return {'outputs': []}
     
-    def relinquish_output(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def relinquish_output(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """出力放棄 - 簡易実装"""
         return {'relinquished': True}
     
     # === 鍵関連メソッド ===
     
-    def reveal_counterparty_key_linkage(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def reveal_counterparty_key_linkage(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """相手方キーリンケージ開示 - 未実装"""
         raise NotImplementedError("reveal_counterparty_key_linkage not implemented")
     
-    def reveal_specific_key_linkage(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def reveal_specific_key_linkage(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """特定キーリンケージ開示 - 未実装"""
         raise NotImplementedError("reveal_specific_key_linkage not implemented")
     
     # === 証明書関連メソッド ===
     
-    def acquire_certificate(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def acquire_certificate(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """証明書取得 - 未実装"""
         logger.warning("acquire_certificate called but not implemented")
         return {'certificate': None}
     
-    def list_certificates(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def list_certificates(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """証明書一覧 - 空リスト返却"""
         return {'certificates': []}
     
-    def prove_certificate(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def prove_certificate(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """証明書証明 - 簡易実装"""
         return {'proof': 'mock_proof'}
     
-    def relinquish_certificate(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def relinquish_certificate(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """証明書放棄 - 簡易実装"""
         return {'relinquished': True}
     
     # === 検索・発見メソッド ===
     
-    def discover_by_identity_key(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def discover_by_identity_key(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """Identity Key による発見 - 簡易実装"""
         identity_key = args.get('identityKey', 'unknown')
         return {'found': False, 'identityKey': identity_key}
     
-    def discover_by_attributes(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def discover_by_attributes(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """属性による発見 - 簡易実装"""
         return {'found': False, 'attributes': args.get('attributes', {})}
     
@@ -300,7 +307,7 @@ class MiddlewareWalletAdapter(WalletInterface):
         """ブロック高取得 - モック値返却"""
         return {'height': 800000}
     
-    def get_header_for_height(self, ctx: Any, args: Dict, originator: str) -> Any:
+    def get_header_for_height(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """指定高のヘッダー取得 - モック値返却"""
         height = args.get('height', 800000)
         return {
@@ -320,12 +327,130 @@ class MiddlewareWalletAdapter(WalletInterface):
         }
 
 
-def create_wallet_adapter(simple_wallet) -> MiddlewareWalletAdapter:
+class WalletImplAdapter:
+    """
+    Lightweight adapter for WalletImpl to convert get_public_key response format.
+    WalletImpl returns Dict, but Peer expects object with public_key attribute.
+    """
+    def __init__(self, wallet_impl: Any):
+        self.wallet_impl = wallet_impl
+        logger.debug("Created WalletImplAdapter")
+    
+    def get_public_key(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
+        """Convert WalletImpl Dict response to object with public_key attribute."""
+        result = self.wallet_impl.get_public_key(ctx, args, originator)
+        
+        if isinstance(result, dict):
+            if 'error' in result:
+                raise Exception(result['error'])
+            
+            pub_key_hex = result.get('publicKey') or result.get('public_key')
+            if pub_key_hex:
+                from bsv.keys import PublicKey
+                pub_key_obj = PublicKey(pub_key_hex)
+                
+                class PublicKeyResult:
+                    def __init__(self, hex_key: str, pub_key_obj: Any):
+                        self.publicKey = hex_key
+                        self.public_key = pub_key_obj
+                        self.hex = hex_key
+                
+                return PublicKeyResult(pub_key_hex, pub_key_obj)
+        
+        return result
+    
+    def create_signature(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
+        """Convert WalletImpl Dict response to object with signature attribute."""
+        # Fix: Peer uses type:3 which is invalid. Map it to type:1 (OTHER)
+        # CounterpartyType: SELF=0, OTHER=1, ANYONE=2
+        # Peer incorrectly uses type:3 for counterparty with explicit public key
+        try:
+            enc_args = args.get('encryption_args', {})
+            if enc_args:
+                cp = enc_args.get('counterparty', {})
+                if isinstance(cp, dict) and cp.get('type') == 3:
+                    logger.debug(f"Fixing invalid counterparty type 3 -> 1 (OTHER)")
+                    cp['type'] = 1  # CounterpartyType.OTHER
+                elif isinstance(cp, dict) and 'type' not in cp:
+                    cp['type'] = 1
+                elif not isinstance(cp, dict):
+                    enc_args['counterparty'] = {'type': 1, 'counterparty': cp}
+        except Exception as e:
+            logger.debug(f"create_signature type fixing failed: {e}")
+        
+        result = self.wallet_impl.create_signature(ctx, args, originator)
+        
+        if isinstance(result, dict):
+            if 'error' in result:
+                logger.error(f"create_signature error: {result['error']}")
+                raise Exception(result['error'])
+            
+            signature = result.get('signature')
+            if signature:
+                class SignatureResult:
+                    def __init__(self, sig: bytes):
+                        self.signature = sig
+                
+                return SignatureResult(signature)
+        
+        return result
+    
+    def verify_signature(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
+        """
+        Normalize verify_signature arguments to what WalletImpl expects (TS parity):
+        - encryption_args.counterparty: ensure dict with type and PublicKey object
+        - protocol_id: ensure dict with protocol string
+        - data/signature: ensure bytes
+        """
+        print(f"[ADAPTER] verify_signature called! originator={originator}")
+        
+        # Debug: log all arguments for comparison with TS
+        try:
+            enc_args_debug = args.get('encryption_args', {})
+            proto_debug = enc_args_debug.get('protocol_id', {})
+            print(f"[ADAPTER DEBUG] protocol: {proto_debug.get('protocol', 'NONE')}")
+            print(f"[ADAPTER DEBUG] key_id: {enc_args_debug.get('key_id', 'NONE')[:50]}...")
+            cp_debug = enc_args_debug.get('counterparty', {})
+            print(f"[ADAPTER DEBUG] counterparty.type: {cp_debug.get('type', 'NONE')}")
+            cp_obj = cp_debug.get('counterparty')
+            if hasattr(cp_obj, 'hex'):
+                print(f"[ADAPTER DEBUG] counterparty.hex: {cp_obj.hex()[:40]}...")
+        except Exception as e:
+            print(f"[ADAPTER DEBUG] Failed to log args: {e}")
+        
+        # Call underlying verify_signature and wrap result as object
+        result = self.wallet_impl.verify_signature(ctx, args, originator)
+        print(f"[ADAPTER VERIFY] WalletImpl.verify_signature result: {result}")
+        
+        if isinstance(result, dict):
+            # Convert dict to object with .valid attribute (Peer expects object)
+            class VerifyResult:
+                def __init__(self, valid: bool, error: str = None):
+                    self.valid = valid
+                    self.error = error
+            
+            if 'error' in result:
+                print(f"[ADAPTER VERIFY] verify_signature error: {result['error']}")
+                return VerifyResult(False, result['error'])
+            
+            valid = result.get('valid', False)
+            print(f"[ADAPTER VERIFY] signature verification: {valid}")
+            print(f"[ADAPTER VERIFY] returning VerifyResult with valid={valid}")
+            return VerifyResult(valid)
+        
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate all other methods to the wrapped WalletImpl."""
+        return getattr(self.wallet_impl, name)
+
+
+def create_wallet_adapter(simple_wallet: Any) -> Any:
     """
     簡単なウォレットから py-sdk 互換のウォレットアダプターを作成
     
     Args:
-        simple_wallet: MockTestWallet などの簡単なウォレット実装
+        simple_wallet: MockTestWallet などの簡単なウォレット実装、または WalletImpl
         
     Returns:
         py-sdk WalletInterface 互換のアダプター
@@ -333,6 +458,12 @@ def create_wallet_adapter(simple_wallet) -> MiddlewareWalletAdapter:
     if not PY_SDK_AVAILABLE:
         logger.warning("py-sdk not available, returning wrapper without WalletInterface inheritance")
         # py-sdk が無い場合は簡易ラッパーを返す
-        return simple_wallet
+        return simple_wallet  # type: ignore
     
+    # Check if wallet is already a full WalletImpl (has create_action, internalize_action, etc.)
+    if hasattr(simple_wallet, 'create_action') and hasattr(simple_wallet, 'internalize_action'):
+        logger.debug("Wallet is WalletImpl, wrapping with WalletImplAdapter")
+        return WalletImplAdapter(simple_wallet)
+    
+    # Otherwise, wrap it with full adapter
     return MiddlewareWalletAdapter(simple_wallet)
