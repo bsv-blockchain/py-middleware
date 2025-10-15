@@ -7,7 +7,7 @@ directly ported from Express ExpressTransport class.
 
 import json
 import logging
-from typing import Optional, Dict, Any, Callable, List
+from typing import Optional, Dict, Any, Callable, List, TYPE_CHECKING
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
 from ..types import (
@@ -17,15 +17,22 @@ from ..types import (
     CertificatesReceivedCallback
 )
 
-# py-sdk Transport interface import
-try:
+# py-sdk Transport interface import with TYPE_CHECKING
+PY_SDK_AVAILABLE = False
+
+if TYPE_CHECKING:
+    # For type checking, always import the real types
     from bsv.auth.transports.transport import Transport
-    PY_SDK_AVAILABLE = True
-except ImportError:
-    # Fallback for when py-sdk is not available
-    class Transport:
-        pass
-    PY_SDK_AVAILABLE = False
+else:
+    # At runtime, try to import, fall back to Any if not available
+    try:
+        from bsv.auth.transports.transport import Transport
+        PY_SDK_AVAILABLE = True
+    except ImportError:
+        # Use Any for runtime when py-sdk is not available
+        Transport = Any  # type: ignore
+        PY_SDK_AVAILABLE = False
+
 from ..exceptions import BSVAuthException, BSVServerMisconfiguredException
 from ..py_sdk_bridge import PySdkBridge
 
@@ -64,7 +71,12 @@ class DjangoTransport(Transport):
         self.open_general_handles: Dict[str, Dict[str, Any]] = {}
         
         # Message callback (equivalent to Express onData callback)
-        self.message_callback: Optional[Callable] = None
+        self.message_callback: Optional[Callable[..., Any]] = None
+        
+        # Certificate handling (Phase 2.6: Express compatibility)
+        self.on_certificates_received: Optional[CertificatesReceivedCallback] = None
+        self._certificate_listener_ids: Dict[str, int] = {}  # identity_key -> listener_id
+        self.open_next_handlers: Dict[str, Callable] = {}  # For continuation after cert receipt
     
     def set_peer(self, peer: Any) -> None:
         """
@@ -90,26 +102,30 @@ class DjangoTransport(Transport):
         """
         try:
             # Store the callback with proper signature handling
-            def wrapper_callback(ctx, message):
+            def wrapper_callback(ctx: Any, message: Any) -> Any:
+                self._log('info', '[WRAPPER] wrapper_callback called!')
+                self._log('info', f'[WRAPPER] ctx type: {type(ctx).__name__}')
+                self._log('info', f'[WRAPPER] message type: {type(message).__name__}')
+                self._log('info', f'[WRAPPER] message.version: {getattr(message, "version", "NONE")}')
+                self._log('info', f'[WRAPPER] message.message_type: {getattr(message, "message_type", "NONE")}')
+                
                 try:
                     # Call the original callback with both ctx and message
-                    # The original callback should be designed to handle both arguments
-                    return callback(ctx, message)
-                except TypeError as e:
-                    if "missing" in str(e) and "positional argument" in str(e):
-                        # Fallback: call with just message if signature mismatch
-                        self._log('warning', 'Callback signature mismatch, calling with message only', {
-                            'error': str(e),
-                            'callback': str(callback)
-                        })
-                        return callback(message)
-                    else:
-                        raise e
+                    self._log('debug', f'wrapper_callback called with ctx={type(ctx).__name__}, message={type(message).__name__}')
+                    
+                    self._log('info', f'[WRAPPER] About to call original callback')
+                    result = callback(ctx, message)
+                    self._log('info', f'[WRAPPER] Original callback returned: {result} (type: {type(result)})')
+                    
+                    self._log('debug', f'callback returned: {result}')
+                    return result
                 except Exception as e:
-                    print(f"[DEBUG] Wrapper callback exception: {e}")
+                    self._log('error', f'Callback execution error: {e}')
                     import traceback
-                    traceback.print_exc()
-                    self._log('error', 'Callback execution error', {'error': str(e)})
+                    tb = traceback.format_exc()
+                    self._log('error', f'Full traceback:\n{tb}')
+                    print(f"[WRAPPER ERROR] Exception: {e}")
+                    print(f"[WRAPPER ERROR] Full traceback:\n{tb}")
                     return e
             
             self.message_callback = wrapper_callback
@@ -136,11 +152,20 @@ class DjangoTransport(Transport):
         try:
             self._log('debug', 'Attempting to send AuthMessage', {'message': str(message)[:200]})
             
-            # Check both messageType and message_type for compatibility
-            message_type = getattr(message, 'messageType', None) or getattr(message, 'message_type', None)
+            # Get message_type (Python standard: snake_case)
+            # Handle both dict and object access patterns
+            if isinstance(message, dict):
+                message_type = message.get('message_type') or message.get('messageType')  # fallback for legacy
+            else:
+                message_type = getattr(message, 'message_type', None) or getattr(message, 'messageType', None)  # fallback for legacy
+            
             if not message_type:
-                print(f"[DEBUG] AuthMessage missing messageType: {message}, attrs: {dir(message)}")
-                return Exception('Invalid AuthMessage: missing messageType')
+                # Debug: show what we received
+                if isinstance(message, dict):
+                    self._log('debug', f'AuthMessage dict keys: {list(message.keys())}')
+                else:
+                    self._log('debug', f'AuthMessage attrs: {[a for a in dir(message) if not a.startswith("_")]}')
+                return Exception('Invalid AuthMessage: missing message_type')
             
             # Special handling for initialResponse - this should be sent as HTTP response
             if message_type == 'initialResponse':
@@ -162,9 +187,9 @@ class DjangoTransport(Transport):
         Equivalent to Express: ExpressTransport.send() non-general branch
         """
         try:
-            your_nonce = getattr(message, 'yourNonce', None)
+            your_nonce = getattr(message, 'your_nonce', None) or getattr(message, 'yourNonce', None)  # fallback for legacy
             if not your_nonce:
-                return Exception('Non-general message missing yourNonce')
+                return Exception('Non-general message missing your_nonce')
             
             handles = self.open_non_general_handles.get(your_nonce, [])
             if not handles:
@@ -234,23 +259,26 @@ class DjangoTransport(Transport):
                 return Exception('No request context available for initial response')
             
             # Convert AuthMessage to JSON response format
-            response_data = {
+            identity_key_raw: Any = getattr(message, 'identity_key', {})
+            identity_key_str: str = identity_key_raw.hex() if hasattr(identity_key_raw, 'hex') else str(identity_key_raw)
+            
+            signature_raw: Any = getattr(message, 'signature', b'')
+            signature_str: str = signature_raw.hex() if isinstance(signature_raw, bytes) else str(signature_raw)
+            
+            response_data: Dict[str, Any] = {
                 'status': 'success',
                 'messageType': getattr(message, 'messageType', getattr(message, 'message_type', 'initialResponse')),
                 'version': getattr(message, 'version', '0.1'),
                 'nonce': getattr(message, 'nonce', ''),
                 'initialNonce': getattr(message, 'initial_nonce', getattr(message, 'initialNonce', '')),
                 'yourNonce': getattr(message, 'your_nonce', getattr(message, 'yourNonce', '')),
-                'identityKey': getattr(message, 'identity_key', {}).hex() if hasattr(getattr(message, 'identity_key', {}), 'hex') else str(getattr(message, 'identity_key', '')),
+                'identityKey': identity_key_str,
                 'certificates': getattr(message, 'certificates', []),
-                'signature': getattr(message, 'signature', b'').hex() if isinstance(getattr(message, 'signature', b''), bytes) else str(getattr(message, 'signature', ''))
+                'signature': signature_str
             }
             
             # Store response data in context for middleware to access
-            if hasattr(request, '_bsv_auth_response'):
-                request._bsv_auth_response = response_data
-            else:
-                setattr(request, '_bsv_auth_response', response_data)
+            setattr(request, '_bsv_auth_response', response_data)
             
             self._log('debug', 'Initial response stored in request context', {
                 'messageType': response_data['messageType'],
@@ -369,13 +397,14 @@ class DjangoTransport(Transport):
             # Simple implementation - in real Express, this uses Utils.Reader
             # For now, return default values
             status_code = 200
-            headers = {}
+            headers: Dict[str, str] = {}
             body = payload if payload else []
             
             return status_code, headers, body
             
         except Exception:
-            return 200, {}, []
+            empty_headers: Dict[str, str] = {}
+            return 200, empty_headers, []
     
     def _message_to_dict(self, message: Any) -> Dict[str, Any]:
         """Convert AuthMessage to dictionary for JSON serialization."""
@@ -455,6 +484,11 @@ class DjangoTransport(Transport):
         py-sdk compliant: Convert HTTP to AuthMessage, delegate to Peer, convert back
         """
         try:
+            # Check if this is a .well-known/bsv/auth POST request (initialRequest)
+            if request.path == '/.well-known/bsv/auth' and request.method == 'POST':
+                self._log('debug', 'Handling .well-known/bsv/auth POST request')
+                return self._handle_well_known_auth(request, response, None)
+            
             # Step 1: Extract BSV headers and convert to AuthMessage
             auth_message = self._convert_http_to_auth_message(request)
             
@@ -477,7 +511,48 @@ class DjangoTransport(Transport):
                 'method': request.method
             }
             
-            # Step 3: Delegate to py-sdk Peer (this is the key integration point!)
+            # Step 2.5: Register certificate listener (Phase 2.6: Express compatibility)
+            # Equivalent to Express: peer.listenForCertificatesReceived()
+            if (auth_message.identity_key and 
+                self.peer and 
+                hasattr(self.peer, 'session_manager') and
+                self.on_certificates_received):
+                
+                identity_key_str = str(auth_message.identity_key)
+                
+                # Only register if session doesn't exist yet (like Express)
+                try:
+                    has_session = self.peer.session_manager.has_session(identity_key_str)
+                except Exception:
+                    has_session = False
+                
+                if not has_session and identity_key_str not in self._certificate_listener_ids:
+                    self._log('debug', 'Registering certificate listener for new session', {
+                        'identity_key': identity_key_str[:20]
+                    })
+                    
+                    # Register certificate listener
+                    listener_id = self._register_certificate_listener(
+                        identity_key_str,
+                        auth_message,
+                        request,
+                        response
+                    )
+                    
+                    if listener_id is not None:
+                        self._certificate_listener_ids[identity_key_str] = listener_id
+                        self._log('debug', 'Certificate listener registered', {
+                            'listener_id': listener_id,
+                            'identity_key': identity_key_str[:20]
+                        })
+            
+            # Step 3: Check if this is a General Message
+            # General Message: has x-bsv-auth-request-id header
+            if request.headers.get('x-bsv-auth-request-id'):
+                self._log('debug', 'Detected General Message, delegating to _handle_general_message')
+                return self._handle_general_message(request, response, None)
+            
+            # Step 3b: Non-general message - delegate to py-sdk Peer
             self._log('debug', 'Delegating to py-sdk Peer.handle_incoming_message')
             
             # Use the message_callback if available (registered via on_data)
@@ -527,11 +602,21 @@ class DjangoTransport(Transport):
             from bsv.auth.auth_message import AuthMessage
             from bsv.keys import PublicKey
             
-            # Extract BSV headers
-            version = request.headers.get('x-bsv-auth-version', '0.1')  # py-sdk expects 0.1
-            message_type = request.headers.get('x-bsv-auth-message-type', 'initial')  # Default to initial
+            # Extract BSV headers (no defaults - must be explicitly present)
+            version = request.headers.get('x-bsv-auth-version', '')
+            message_type = request.headers.get('x-bsv-auth-message-type', '')
             identity_key_hex = request.headers.get('x-bsv-auth-identity-key', '')
             nonce = request.headers.get('x-bsv-auth-nonce', '')
+            
+            # Check if this is a BSV auth request - must have at least one BSV header
+            if not any([version, message_type, identity_key_hex, nonce]):
+                return None
+            
+            # Set defaults only if BSV headers are present
+            if not version:
+                version = '0.1'  # py-sdk expects 0.1
+            if not message_type:
+                message_type = 'initialRequest'  # Default to initialRequest
             
             # Convert version for py-sdk compatibility
             if version == '1.0':
@@ -540,10 +625,6 @@ class DjangoTransport(Transport):
             # Convert message_type for py-sdk compatibility
             if message_type == 'initial':
                 message_type = 'initialRequest'  # py-sdk uses initialRequest
-            
-            # Check if this is a BSV auth request
-            if not message_type and not identity_key_hex:
-                return None
             
             # Convert identity key to PublicKey object
             identity_key = None
@@ -698,22 +779,67 @@ class DjangoTransport(Transport):
                 if not self.peer.sessionManager.hasSession(identity_key):
                     self._setup_certificate_listener(identity_key, request, response, on_certificates_received)
             
-            # Trigger message processing through py-sdk
+            # Trigger message processing through py-sdk Peer
             if self.message_callback:
-                # Convert message_data to proper AuthMessage format
-                auth_message = self._dict_to_auth_message(message_data)
-                
-                # Call the callback asynchronously (Express pattern)
                 try:
-                    import asyncio
-                    loop = asyncio.get_event_loop()
-                    loop.create_task(self.message_callback(auth_message))
-                except Exception:
-                    # Fallback: call synchronously
-                    self.message_callback(auth_message)
+                    # Convert message_data to proper AuthMessage format
+                    self._log('debug', 'Converting message_data to AuthMessage', {'message_data': message_data})
+                    auth_message = self._dict_to_auth_message(message_data)
+                    self._log('debug', 'AuthMessage created successfully', {
+                        'message_type': getattr(auth_message, 'message_type', 'unknown'),
+                        'identity_key_type': type(getattr(auth_message, 'identity_key', None)).__name__
+                    })
+                    
+                    # Create context for Peer
+                    ctx = {
+                        'request': request,
+                        'response': response,
+                        'request_id': request_id
+                    }
+                    
+                    # Call Peer.handle_incoming_message synchronously
+                    self._log('debug', 'Calling message_callback with ctx and auth_message')
+                    error = self.message_callback(ctx, auth_message)
+                    self._log('debug', f'message_callback returned: {error}')
+                    
+                    if error:
+                        self._log('error', f'Peer processing error: {error}')
+                        import traceback
+                        self._log('error', f'Traceback: {traceback.format_exc()}')
+                        return JsonResponse({
+                            'status': 'error',
+                            'code': 'ERR_PEER_PROCESSING_FAILED',
+                            'description': str(error)
+                        }, status=500)
+                except Exception as e:
+                    self._log('error', f'Exception in message processing: {e}')
+                    import traceback
+                    self._log('error', f'Traceback: {traceback.format_exc()}')
+                    return JsonResponse({
+                        'status': 'error',
+                        'code': 'ERR_AUTH_PROCESSING_FAILED',
+                        'description': str(e)
+                    }, status=500)
+                
+                # Check if Peer sent initialResponse via _send_initial_response
+                # The response data is stored in request._bsv_auth_response
+                if hasattr(request, '_bsv_auth_response'):
+                    self._log('debug', 'Returning initialResponse from Peer')
+                    return JsonResponse(request._bsv_auth_response)
+                
+                # Fallback: return processing acknowledgment
+                self._log('warn', 'No initialResponse found in request context')
+                return JsonResponse({
+                    'status': 'processing',
+                    'message': 'Authentication request received'
+                })
             
-            # Return None to indicate processing continues (Express: next() equivalent)
-            return None
+            # No message callback - should not happen if Peer is initialized
+            return JsonResponse({
+                'status': 'error',
+                'code': 'ERR_NO_PEER',
+                'description': 'Peer not initialized'
+            }, status=500)
             
         except Exception as e:
             self._log('error', f'Failed to handle /.well-known/auth: {e}')
@@ -740,20 +866,82 @@ class DjangoTransport(Transport):
             self._log('debug', 'Received general message with x-bsv-auth-request-id', {'message': str(auth_message)[:200]})
             
             # Set up general message listener (Express: peer.listenForGeneralMessages)
-            if hasattr(self.peer, 'listenForGeneralMessages'):
-                listener_id = self._setup_general_message_listener(request, response, auth_message)
-                self._log('debug', 'listenForGeneralMessages registered', {'listenerId': listener_id})
+            listener_id = self._setup_general_message_listener(request, response, auth_message)
+            self._log('debug', 'General message listener registered', {'listenerId': listener_id})
             
-            # Trigger message processing
+            # Trigger message processing SYNCHRONOUSLY
+            # Peer will process the message, verify signature, and call the callback
+            # The callback will set request.auth if authentication succeeds
+            print(f"[DEBUG transport] About to call message_callback")
+            print(f"[DEBUG transport] auth_message: {auth_message}")
+            print(f"[DEBUG transport] request.auth before: {getattr(request, 'auth', 'NOT SET')}")
+            
             if self.message_callback:
                 try:
-                    import asyncio
-                    loop = asyncio.get_event_loop()
-                    loop.create_task(self.message_callback(auth_message))
-                except Exception:
-                    self.message_callback(auth_message)
+                    self._log('debug', 'Calling message_callback synchronously for general message')
+                    
+                    # デバッグ：AuthMessageの詳細を確認
+                    print(f"[DEBUG transport] === AUTH MESSAGE DETAILS ===")
+                    print(f"[DEBUG transport] Type: {type(auth_message)}")
+                    print(f"[DEBUG transport] version: {getattr(auth_message, 'version', 'NOT SET')}")
+                    print(f"[DEBUG transport] message_type: {getattr(auth_message, 'message_type', 'NOT SET')}")
+                    print(f"[DEBUG transport] identity_key: {getattr(auth_message, 'identity_key', 'NOT SET')}")
+                    print(f"[DEBUG transport] nonce: {getattr(auth_message, 'nonce', 'NOT SET')[:20] if hasattr(auth_message, 'nonce') else 'NOT SET'}")
+                    print(f"[DEBUG transport] signature: {getattr(auth_message, 'signature', 'NOT SET')[:20] if hasattr(auth_message, 'signature') else 'NOT SET'}")
+                    print(f"[DEBUG transport] payload: {type(getattr(auth_message, 'payload', None))}")
+                    print(f"[DEBUG transport] ===========================")
+                    
+                    # Call synchronously - Peer.handle_general_message is synchronous
+                    result = self.message_callback(None, auth_message)  # ctx, message
+                    
+                    print(f"[DEBUG transport] message_callback returned: {result} (type: {type(result)})")
+                    self._log('debug', 'message_callback completed')
+                    print(f"[DEBUG transport] message_callback completed successfully")
+                except Exception as e:
+                    self._log('error', f'message_callback failed: {e}')
+                    import traceback
+                    traceback.print_exc()
+                    print(f"[DEBUG transport] message_callback FAILED: {e}")
+                    return JsonResponse({
+                        'status': 'error',
+                        'code': 'ERR_MESSAGE_PROCESSING_FAILED',
+                        'description': str(e)
+                    }, status=500)
             
-            return None
+            print(f"[DEBUG transport] request.auth after: {getattr(request, 'auth', 'NOT SET')}")
+            
+            # Debug: detailed request.auth inspection
+            if hasattr(request, 'auth'):
+                print(f"[DEBUG transport] request.auth exists: {request.auth}")
+                print(f"[DEBUG transport] request.auth.identity_key: {getattr(request.auth, 'identity_key', 'NO IDENTITY_KEY')}")
+                print(f"[DEBUG transport] request.auth.authenticated: {getattr(request.auth, 'authenticated', 'NO AUTHENTICATED')}")
+            else:
+                print(f"[DEBUG transport] request.auth does NOT exist")
+            
+            # After message processing, check if authentication was successful
+            if hasattr(request, 'auth') and request.auth.identity_key != 'unknown':
+                self._log('info', 'General message authenticated, continuing to view', {
+                    'identityKey': request.auth.identity_key[:20] + '...'
+                })
+                print(f"[DEBUG transport] Authentication SUCCESS")
+                
+                # TypeScript compatibility: Check for payment header
+                payment_header = request.headers.get('X-BSV-Payment')
+                if payment_header:
+                    print(f"[DEBUG transport] Payment header detected, continuing to payment middleware")
+                    return None  # Continue to payment middleware
+                else:
+                    print(f"[DEBUG transport] No payment header, checking if payment required")
+                    # Let the view/payment middleware handle payment requirement
+                    return None  # Continue to next middleware/view
+            else:
+                # Authentication failed or not set
+                self._log('warn', 'General message authentication failed')
+                print(f"[DEBUG transport] Authentication FAILED, returning 401")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
             
         except Exception as e:
             self._log('error', f'Failed to handle general message: {e}')
@@ -1044,23 +1232,55 @@ class DjangoTransport(Transport):
             handle = {'response': response, 'request': request}
             self.open_general_handles[request_id] = handle
             
-            def general_message_callback(received_message):
-                """Handle received general message"""
-                self._log('debug', 'General message received', {
-                    'requestId': request_id,
-                    'message': str(received_message)[:200]
-                })
+            def general_message_callback(sender_public_key: Any, payload: Any):
+                """
+                Handle received general message.
+                Called by py-sdk Peer when general message is verified.
                 
-                # Message will be processed by py-sdk and sent via send() method
-                # This callback is just for logging/monitoring
+                Args:
+                    sender_public_key: Verified sender's public key
+                    payload: General message payload
+                """
+                print(f"[DEBUG callback] General message callback CALLED!")
+                print(f"[DEBUG callback] sender_public_key: {sender_public_key}")
+                print(f"[DEBUG callback] payload length: {len(payload) if payload else 0}")
+                
+                try:
+                    self._log('debug', 'General message callback triggered', {
+                        'requestId': request_id,
+                        'senderPublicKey': sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
+                    })
+                    
+                    # ✅ TypeScript版と同じ: req.auth = { identityKey: senderPublicKey }
+                    from ..types import AuthInfo
+                    identity_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
+                    request.auth = AuthInfo(identity_key=identity_key_hex)
+                    
+                    print(f"[DEBUG callback] request.auth SET to: {identity_key_hex[:20]}...")
+                    
+                    self._log('info', 'General message authenticated successfully', {
+                        'identityKey': identity_key_hex[:20] + '...',
+                        'requestId': request_id
+                    })
+                    
+                except Exception as e:
+                    self._log('error', f'Error in general message callback: {e}')
+                    print(f"[DEBUG callback] ERROR: {e}")
+                    import traceback
+                    traceback.print_exc()
             
-            # Register listener with py-sdk Peer
-            if hasattr(self.peer, 'listenForGeneralMessages'):
+            # Register listener with py-sdk Peer (snake_case method name)
+            if hasattr(self.peer, 'listen_for_general_messages'):
+                listener_id = self.peer.listen_for_general_messages(general_message_callback)
+                self._log('debug', 'listen_for_general_messages registered', {'listenerId': listener_id})
+                return listener_id
+            elif hasattr(self.peer, 'listenForGeneralMessages'):
+                # Fallback for camelCase (older SDK versions)
                 listener_id = self.peer.listenForGeneralMessages(general_message_callback)
-                self._log('debug', 'listenForGeneralMessages registered', {'listenerId': listener_id})
+                self._log('debug', 'listenForGeneralMessages (camelCase) registered', {'listenerId': listener_id})
                 return listener_id
             else:
-                self._log('warn', 'Peer does not support listenForGeneralMessages')
+                self._log('warn', 'Peer does not support listen_for_general_messages')
                 return 'unsupported'
                 
         except Exception as e:
@@ -1097,25 +1317,32 @@ class DjangoTransport(Transport):
                     self._log('warn', f'Failed to parse requested certificates: {e}')
             
             # Add request body as payload for general messages
-            if request.body:
-                # Convert body to byte array format (Express: Utils.toArray)
-                message_data['payload'] = list(request.body)
+            # Keep payload as raw bytes to match py-sdk Peer signing expectations
+            if request.body and len(request.body) > 0:
+                message_data['payload'] = request.body  # bytes
+                # Debug: log request body for comparison with client
+                try:
+                    import hashlib
+                    body_digest = hashlib.sha256(request.body).digest()
+                    self._log('debug', f'Server request.body digest_head: {body_digest[:32].hex()}')
+                except Exception:
+                    pass
             else:
-                message_data['payload'] = []
+                message_data['payload'] = b""
             
             # Convert signature from hex to bytes
             if message_data['signature']:
                 try:
                     signature_hex = message_data['signature']
                     signature_bytes = bytes.fromhex(signature_hex)
-                    message_data['signature'] = list(signature_bytes)
+                    message_data['signature'] = signature_bytes
                 except Exception as e:
                     self._log('warn', f'Failed to parse signature hex: {e}')
             
             self._log('debug', 'Built AuthMessage from request', {
                 'messageType': message_data['messageType'],
                 'identityKey': message_data['identityKey'][:20] + '...' if message_data['identityKey'] else '',
-                'hasPayload': len(message_data['payload']) > 0
+                'hasPayload': (isinstance(message_data['payload'], (bytes, bytearray)) and len(message_data['payload']) > 0)
             })
             
             return self._dict_to_auth_message(message_data)
@@ -1126,19 +1353,88 @@ class DjangoTransport(Transport):
     
     def _dict_to_auth_message(self, message_data: Dict[str, Any]) -> Any:
         """
-        Convert dictionary to AuthMessage object.
+        Convert dictionary to py-sdk AuthMessage object.
         
-        Creates a simple object with message attributes for py-sdk compatibility.
+        Uses the actual py-sdk AuthMessage class for full compatibility.
+        Converts camelCase keys to snake_case and transforms data types as needed.
         """
-        class AuthMessage:
-            def __init__(self, data: Dict[str, Any]):
-                for key, value in data.items():
-                    setattr(self, key, value)
+        try:
+            from bsv.auth.auth_message import AuthMessage
+            from bsv.keys import PublicKey
             
-            def __str__(self):
-                return f"AuthMessage(type={getattr(self, 'messageType', 'unknown')}, identity={getattr(self, 'identityKey', 'unknown')[:20]}...)"
-        
-        return AuthMessage(message_data)
+            # Prepare data with proper type conversions
+            converted_data = {}
+            
+            # Map and convert keys
+            key_mapping = {
+                'messageType': 'message_type',
+                'identityKey': 'identity_key',
+                'yourNonce': 'your_nonce',
+                'initialNonce': 'initial_nonce',
+                # 'nonce' handled below depending on message type
+            }
+            
+            for key, value in message_data.items():
+                # Use mapped key if available
+                if key == 'nonce':
+                    # For initialRequest, client's field is 'nonce' but AuthMessage expects 'initial_nonce'
+                    # For general messages, it must remain 'nonce'
+                    msg_type = message_data.get('messageType') or message_data.get('message_type')
+                    if msg_type == 'initialRequest':
+                        converted_key = 'initial_nonce'
+                    else:
+                        converted_key = 'nonce'
+                else:
+                    converted_key = key_mapping.get(key, key)
+                
+                # Convert identityKey hex string to PublicKey object
+                if key in ['identityKey', 'identity_key'] and isinstance(value, str):
+                    try:
+                        value = PublicKey(value)
+                    except Exception as e:
+                        self._log('warning', f'Failed to convert identity key to PublicKey: {e}')
+                
+                converted_data[converted_key] = value
+            
+            # Create AuthMessage with required arguments
+            # Required: version, message_type, identity_key
+            version = converted_data.get('version', '0.1')
+            message_type = converted_data.get('message_type', 'unknown')
+            identity_key = converted_data.get('identity_key')
+            
+            if not identity_key:
+                raise ValueError("identity_key is required for AuthMessage")
+            
+            # Optional arguments
+            nonce = converted_data.get('nonce', '')
+            initial_nonce = converted_data.get('initial_nonce', nonce)  # Use nonce as fallback
+            your_nonce = converted_data.get('your_nonce', '')
+            certificates = converted_data.get('certificates', [])
+            requested_certificates = converted_data.get('requested_certificates')
+            payload = converted_data.get('payload')
+            signature = converted_data.get('signature')
+            
+            return AuthMessage(
+                version=version,
+                message_type=message_type,
+                identity_key=identity_key,
+                nonce=nonce,
+                initial_nonce=initial_nonce,
+                your_nonce=your_nonce,
+                certificates=certificates,
+                requested_certificates=requested_certificates,
+                payload=payload,
+                signature=signature
+            )
+                
+        except ImportError as e:
+            self._log('error', f'Failed to import AuthMessage: {e}')
+            # Fallback to simple object
+            class SimpleAuthMessage:
+                def __init__(self, data: Dict[str, Any]):
+                    for key, value in data.items():
+                        setattr(self, key, value)
+            return SimpleAuthMessage(message_data)
     
     def _handle_auth_endpoint(
         self,
@@ -1284,6 +1580,225 @@ class DjangoTransport(Transport):
             logger.warning(full_message)
         elif level == 'error':
             logger.error(full_message)
+    
+    def _get_request_body_for_bsv_protocol(self, request: HttpRequest) -> bytes:
+        """
+        BSVプロトコル用にリクエストボディを取得
+        multipart/form-dataも含めて統一的にバイナリ処理
+        
+        Args:
+            request: Django HTTP request
+            
+        Returns:
+            bytes: BSV署名検証用の生リクエストボディ
+        """
+        content_type = request.META.get('CONTENT_TYPE', '')
+        
+        if request.body:
+            # すべてのContent-Typeをバイナリとして処理（Go方式）
+            # BSV署名検証では生のバイナリデータが必要
+            self._log('debug', f'Processing body for BSV protocol', {
+                'content_type': content_type,
+                'body_length': len(request.body)
+            })
+            return request.body
+        else:
+            # 空のリクエスト
+            self._log('debug', 'Empty request body for BSV protocol')
+            return b''
+    
+    def _should_preserve_raw_body(self, request: HttpRequest) -> bool:
+        """
+        BSV署名検証のため、生のリクエストボディを保持すべきかチェック
+        
+        Args:
+            request: Django HTTP request
+            
+        Returns:
+            bool: True if raw body should be preserved
+        """
+        content_type = request.META.get('CONTENT_TYPE', '')
+        
+        # multipart/form-dataも含めて、BSVプロトコルでは全て生データとして扱う
+        # Express and Go実装と同じアプローチ
+        self._log('debug', f'Checking raw body preservation', {
+            'content_type': content_type,
+            'preserve': True
+        })
+        return True  # BSVミドルウェアでは常に生データを保持
+    
+    def _is_multipart_request(self, request: HttpRequest) -> bool:
+        """
+        multipart/form-dataリクエストかチェック
+        
+        Args:
+            request: Django HTTP request
+            
+        Returns:
+            bool: True if multipart/form-data request
+        """
+        is_multipart = request.META.get('CONTENT_TYPE', '').startswith('multipart/form-data')
+        
+        if is_multipart:
+            self._log('debug', 'Detected multipart/form-data request', {
+                'content_type': request.META.get('CONTENT_TYPE', ''),
+                'content_length': request.META.get('CONTENT_LENGTH', 0)
+            })
+        
+        return is_multipart
+    
+    # ========================================================================
+    # Phase 2.6: Certificate Listener Support (Express compatibility)
+    # ========================================================================
+    
+    def _register_certificate_listener(
+        self,
+        identity_key: str,
+        auth_message: Any,
+        request: HttpRequest,
+        response: Optional[HttpResponse]
+    ) -> Optional[int]:
+        """
+        Register a certificate listener with the peer.
+        
+        Equivalent to Express:
+        ```typescript
+        const listenerId = this.peer.listenForCertificatesReceived(
+          (senderPublicKey: string, certs: VerifiableCertificate[]) => {
+            // ... handle certificates
+          })
+        ```
+        
+        Args:
+            identity_key: Public key of the peer
+            auth_message: Auth message from the request
+            request: Django HTTP request
+            response: Django HTTP response
+            
+        Returns:
+            Listener ID if successful, None otherwise
+        """
+        try:
+            # Check if peer has the required method
+            if not hasattr(self.peer, 'listen_for_certificates_received'):
+                self._log('warn', 'Peer does not support listen_for_certificates_received')
+                return None
+            
+            # Define the certificate callback
+            def certificate_callback(sender_public_key: str, certificates: List[Any]) -> None:
+                """
+                Callback invoked when certificates are received.
+                
+                Equivalent to Express listener callback.
+                """
+                self._log('debug', 'Certificate listener triggered', {
+                    'sender': sender_public_key[:20] if sender_public_key else None,
+                    'cert_count': len(certificates) if certificates else 0
+                })
+                
+                # Verify sender matches expected identity
+                if sender_public_key != identity_key:
+                    self._log('debug', 'Certificate sender mismatch, ignoring', {
+                        'expected': identity_key[:20],
+                        'received': sender_public_key[:20] if sender_public_key else None
+                    })
+                    return
+                
+                # Validate certificates
+                if not certificates or len(certificates) == 0:
+                    self._log('warn', 'No certificates provided by peer', {
+                        'sender': sender_public_key[:20]
+                    })
+                    # Could send error response here (like Express does)
+                    # For now, just log
+                    return
+                
+                self._log('info', 'Certificates received from peer', {
+                    'sender': sender_public_key[:20],
+                    'cert_count': len(certificates)
+                })
+                
+                # Call the application's certificate callback
+                if self.on_certificates_received:
+                    try:
+                        self.on_certificates_received(
+                            sender_public_key,
+                            certificates,
+                            request,
+                            response
+                        )
+                        self._log('debug', 'Application certificate callback executed')
+                    except Exception as e:
+                        self._log('error', f'Certificate callback error: {e}', {
+                            'error': str(e),
+                            'sender': sender_public_key[:20]
+                        })
+                
+                # Handle any continuation handlers (like Express openNextHandlers)
+                next_handler = self.open_next_handlers.get(identity_key)
+                if next_handler and callable(next_handler):
+                    try:
+                        next_handler()
+                        del self.open_next_handlers[identity_key]
+                        self._log('debug', 'Continuation handler executed and removed')
+                    except Exception as e:
+                        self._log('error', f'Continuation handler error: {e}')
+                
+                # Clean up: stop listening after receiving certificates
+                self._cleanup_certificate_listener(identity_key, sender_public_key)
+            
+            # Register the listener with py-sdk Peer
+            listener_id = self.peer.listen_for_certificates_received(certificate_callback)
+            
+            self._log('debug', 'Certificate listener registered with peer', {
+                'listener_id': listener_id,
+                'identity_key': identity_key[:20]
+            })
+            
+            return listener_id
+            
+        except Exception as e:
+            self._log('error', f'Failed to register certificate listener: {e}', {
+                'error': str(e),
+                'identity_key': identity_key[:20]
+            })
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    def _cleanup_certificate_listener(self, identity_key: str, sender_public_key: str) -> None:
+        """
+        Clean up certificate listener after certificates are received.
+        
+        Equivalent to Express:
+        ```typescript
+        this.peer?.stopListeningForCertificatesReceived(listenerId)
+        ```
+        
+        Args:
+            identity_key: Identity key used for registration
+            sender_public_key: Sender's public key
+        """
+        try:
+            # Remove from tracking
+            listener_id = self._certificate_listener_ids.pop(identity_key, None)
+            
+            if listener_id is not None:
+                # Stop listening with py-sdk Peer
+                if hasattr(self.peer, 'stop_listening_for_certificates_received'):
+                    try:
+                        self.peer.stop_listening_for_certificates_received(listener_id)
+                        self._log('debug', 'Certificate listener stopped', {
+                            'listener_id': listener_id,
+                            'sender': sender_public_key[:20]
+                        })
+                    except Exception as e:
+                        self._log('warn', f'Failed to stop certificate listener: {e}')
+                else:
+                    self._log('debug', 'Peer does not support stop_listening_for_certificates_received')
+            
+        except Exception as e:
+            self._log('error', f'Error cleaning up certificate listener: {e}')
 
     def _is_log_level_enabled(self, message_level: str) -> bool:
         """

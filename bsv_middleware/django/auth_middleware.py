@@ -117,6 +117,10 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 # Peer インスタンス作成 (Express new Peer() 同等)
                 from bsv.auth.peer import Peer, PeerOptions
                 
+                # Debug: Verify adapter type before passing to Peer
+                logger.info(f"[AUTH MIDDLEWARE DEBUG] adapted_wallet type: {type(adapted_wallet)}")
+                logger.info(f"[AUTH MIDDLEWARE DEBUG] adapted_wallet methods: {[m for m in dir(adapted_wallet) if 'verify' in m]}")
+                
                 peer_options = PeerOptions(
                     wallet=adapted_wallet,
                     transport=self.transport,
@@ -130,7 +134,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 self.peer = Peer(peer_options)
                 self.transport.set_peer(self.peer)
                 
-                logger.info("✅ py-sdk Peer integration successful")
+                # CRITICAL: Start the peer to register message handlers
+                self.peer.start()
+                logger.info("✅ py-sdk Peer started and integration successful")
                 
             except Exception as e:
                 logger.error(f"❌ py-sdk Peer integration failed: {e}")
@@ -149,6 +155,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
             )
     
     def __call__(self, request: HttpRequest) -> HttpResponse:
+        print(f"[AUTH MIDDLEWARE] Processing request: {request.path}")
         """
         Main middleware entry point.
         
@@ -269,16 +276,20 @@ class BSVAuthMiddleware(MiddlewareMixin):
         except Exception as log_error:
             logger.warning(f"Failed to write integration error log: {log_error}")
 
-    def _get_session_manager(self, request: HttpRequest) -> DjangoSessionManager:
+    def _get_session_manager(self, request: HttpRequest):
         """
         Get or create session manager for the request.
         
+        Returns py-sdk compatible SessionManager (with adapter).
         Equivalent to Express: sessionManager || new SessionManager()
         """
         if self.custom_session_manager:
             return self.custom_session_manager
         
-        return create_django_session_manager(request.session)
+        # Create Django session manager with py-sdk adapter
+        from .session_manager import DjangoSessionManagerAdapter, create_django_session_manager
+        django_sm = create_django_session_manager(request.session)
+        return DjangoSessionManagerAdapter(django_sm)
     
     def _build_error_response(self, exception: BSVAuthException) -> JsonResponse:
         """

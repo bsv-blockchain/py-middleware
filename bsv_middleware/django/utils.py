@@ -9,17 +9,24 @@ from typing import Optional, List, Dict, Any, Callable
 from functools import wraps
 
 from django.http import JsonResponse, HttpRequest
+from django.core.files.uploadedfile import UploadedFile
+from django.http.multipartparser import MultiPartParser
 from ..types import AuthInfo, PaymentInfo
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 def get_identity_key(request: HttpRequest) -> Optional[str]:
     """Get the identity key from a BSV authenticated request."""
     # Check both bsv_auth (new) and auth (middleware-set) for compatibility
     if hasattr(request, 'bsv_auth') and request.bsv_auth:
-        return request.bsv_auth.identity_key
+        result: str = request.bsv_auth.identity_key
+        return result
     elif hasattr(request, 'auth') and request.auth and hasattr(request.auth, 'identity_key'):
-        return request.auth.identity_key if request.auth.identity_key != 'unknown' else None
-    return None
+        result_auth: str = request.auth.identity_key
+        return result_auth
+    return 'unknown'
 
 
 def get_certificates(request: HttpRequest) -> List[Any]:
@@ -33,29 +40,40 @@ def is_authenticated_request(request: HttpRequest) -> bool:
     """Check if request has valid BSV authentication."""
     # Check both bsv_auth (new) and auth (middleware-set) for compatibility
     if hasattr(request, 'bsv_auth') and request.bsv_auth:
-        return (
-            request.bsv_auth.authenticated and 
-            request.bsv_auth.identity_key is not None
+        # Check for is_authenticated property or authenticated attribute
+        is_auth = (
+            request.bsv_auth.is_authenticated 
+            if hasattr(request.bsv_auth, 'is_authenticated') 
+            else getattr(request.bsv_auth, 'authenticated', False)
         )
+        result: bool = bool(
+            is_auth and 
+            request.bsv_auth.identity_key is not None and
+            request.bsv_auth.identity_key != 'unknown'
+        )
+        return result
     elif hasattr(request, 'auth') and request.auth and hasattr(request.auth, 'identity_key'):
-        return request.auth.identity_key is not None and request.auth.identity_key != 'unknown'
+        key: Any = request.auth.identity_key
+        return key is not None and key != 'unknown'
     return False
 
 
 def is_payment_processed(request: HttpRequest) -> bool:
     """Check if request has valid BSV payment."""
     if hasattr(request, 'bsv_payment') and request.bsv_payment:
-        return (
+        result: bool = bool(
             request.bsv_payment.accepted and 
             request.bsv_payment.satoshis_paid > 0
         )
+        return result
     return False
 
 
 def get_request_payment_info(request: HttpRequest) -> Optional[PaymentInfo]:
     """Get payment information from request."""
     if hasattr(request, 'bsv_payment'):
-        return request.bsv_payment
+        result: PaymentInfo = request.bsv_payment
+        return result
     return None
 
 
@@ -63,9 +81,11 @@ def get_request_auth_info(request: HttpRequest) -> Optional[AuthInfo]:
     """Get authentication information from request."""
     # Check both bsv_auth (new) and auth (middleware-set) for compatibility
     if hasattr(request, 'bsv_auth'):
-        return request.bsv_auth
+        result: AuthInfo = request.bsv_auth
+        return result
     elif hasattr(request, 'auth') and request.auth:
-        return request.auth
+        result2: AuthInfo = request.auth
+        return result2
     return None
 
 
@@ -87,16 +107,21 @@ def get_bsv_headers(request: HttpRequest) -> Dict[str, str]:
     }
 
 
+def extract_bsv_headers(request: HttpRequest) -> Dict[str, str]:
+    """Extract BSV headers from request (alias for get_bsv_headers for compatibility)."""
+    return get_bsv_headers(request)
+
+
 # Decorators for view protection
 
-def bsv_authenticated_required(view_func: Callable) -> Callable:
+def bsv_authenticated_required(view_func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator that requires BSV authentication for a view.
     
     Returns 401 if request is not authenticated.
     """
     @wraps(view_func)
-    def wrapper(request: HttpRequest, *args, **kwargs):
+    def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
         if not is_authenticated_request(request):
             return JsonResponse({
                 'error': 'Authentication required',
@@ -107,7 +132,7 @@ def bsv_authenticated_required(view_func: Callable) -> Callable:
     return wrapper
 
 
-def bsv_payment_required(required_satoshis: int) -> Callable:
+def bsv_payment_required(required_satoshis: int) -> Callable[..., Any]:
     """
     Decorator that requires BSV payment for a view.
     
@@ -116,9 +141,9 @@ def bsv_payment_required(required_satoshis: int) -> Callable:
         
     Returns 402 if payment is insufficient.
     """
-    def decorator(view_func: Callable) -> Callable:
+    def decorator(view_func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(view_func)
-        def wrapper(request: HttpRequest, *args, **kwargs):
+        def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
             # Check authentication first
             if not is_authenticated_request(request):
                 return JsonResponse({
@@ -146,7 +171,7 @@ def bsv_payment_required(required_satoshis: int) -> Callable:
     return decorator
 
 
-def bsv_certificates_required(certificate_types: List[str]) -> Callable:
+def bsv_certificates_required(certificate_types: List[str]) -> Callable[..., Any]:
     """
     Decorator that requires specific certificate types.
     
@@ -155,9 +180,9 @@ def bsv_certificates_required(certificate_types: List[str]) -> Callable:
         
     Returns 403 if certificates are missing.
     """
-    def decorator(view_func: Callable) -> Callable:
+    def decorator(view_func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(view_func)
-        def wrapper(request: HttpRequest, *args, **kwargs):
+        def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
             # Check authentication first
             if not is_authenticated_request(request):
                 return JsonResponse({
@@ -212,7 +237,7 @@ def debug_request_info(request: HttpRequest) -> Dict[str, Any]:
             'identity_key': get_identity_key(request),
             'certificates_count': len(get_certificates(request)),
             'auth_info': {
-                'authenticated': auth_info.authenticated if auth_info else False,
+                'authenticated': auth_info.is_authenticated if auth_info else False,
                 'identity_key': auth_info.identity_key if auth_info else None,
                 'certificates': len(auth_info.certificates) if auth_info and auth_info.certificates else 0
             } if auth_info else None
@@ -258,3 +283,277 @@ def create_bsv_response(data: Dict[str, Any], request: HttpRequest) -> JsonRespo
     }
     
     return JsonResponse(response_data)
+
+
+# ==================== multipart/form-data Support Functions ====================
+
+def get_multipart_data(request: HttpRequest) -> Dict[str, Any]:
+    """
+    BSV認証後にmultipart/form-dataを安全に解析
+    
+    Args:
+        request: Django HTTP request (BSV authentication already processed)
+    
+    Returns:
+        dict: {
+            'fields': {...},  # フォームフィールド
+            'files': {...}    # アップロードファイル
+        }
+    """
+    if not request.META.get('CONTENT_TYPE', '').startswith('multipart/form-data'):
+        return {'fields': {}, 'files': {}}
+    
+    try:
+        # BSV処理後にDjangoの標準パーサーを使用
+        # 注意: BSV署名検証は既に完了済みなので、ここで安全に解析可能
+        parser = MultiPartParser(
+            request.META, 
+            request, 
+            request.upload_handlers
+        )
+        
+        post_data, files_data = parser.parse()
+        
+        logger.debug(f"Parsed multipart data: {len(post_data)} fields, {len(files_data)} files")
+        
+        return {
+            'fields': dict(post_data),
+            'files': dict(files_data)
+        }
+        
+    except Exception as e:
+        logger.warning(f"Failed to parse multipart data: {e}")
+        return {'fields': {}, 'files': {}}
+
+
+def is_multipart_request(request: HttpRequest) -> bool:
+    """multipart/form-dataリクエストかチェック"""
+    result: bool = request.META.get('CONTENT_TYPE', '').startswith('multipart/form-data')
+    return result
+
+
+def is_text_plain_request(request: HttpRequest) -> bool:
+    """text/plainリクエストかチェック"""
+    content_type = request.META.get('CONTENT_TYPE', '').lower().strip()
+    return content_type == 'text/plain' or content_type.startswith('text/plain;')
+
+
+def get_text_content(request: HttpRequest, encoding: str = 'utf-8') -> str:
+    """
+    text/plainリクエストからテキストコンテンツを取得
+    
+    Args:
+        request: Django HTTP request (text/plain content-type)
+        encoding: テキストエンコーディング (default: utf-8)
+    
+    Returns:
+        str: デコードされたテキストコンテンツ
+        
+    Raises:
+        ValueError: text/plainでない、またはデコードに失敗した場合
+    """
+    if not is_text_plain_request(request):
+        raise ValueError('Request is not text/plain content type')
+    
+    try:
+        # raw body をテキストとしてデコード
+        text_content = request.body.decode(encoding)
+        
+        logger.debug(f"Decoded text/plain content: {len(text_content)} characters")
+        return text_content
+        
+    except UnicodeDecodeError as e:
+        logger.warning(f"Failed to decode text/plain content as {encoding}: {e}")
+        raise ValueError(f'Failed to decode text content as {encoding}')
+
+
+def get_content_by_type(request: HttpRequest) -> Dict[str, Any]:
+    """
+    Content-Typeに応じてリクエストコンテンツを解析 (Express writeBodyToWriter 相当)
+    
+    Args:
+        request: Django HTTP request
+        
+    Returns:
+        dict: {
+            'content_type': str,
+            'data': Any,  # 解析されたデータ
+            'encoding': str,
+            'processed_body': bytes  # BSVプロトコル用の処理済みボディ
+        }
+    """
+    content_type = request.META.get('CONTENT_TYPE', '').lower().strip()
+    
+    try:
+        if is_multipart_request(request):
+            # multipart/form-data
+            multipart_data = get_multipart_data(request)
+            return {
+                'content_type': 'multipart/form-data',
+                'data': multipart_data,
+                'encoding': 'multipart',
+                'processed_body': request.body  # 生データを保持
+            }
+            
+        elif content_type == 'application/json' or content_type.startswith('application/json;'):
+            # JSON - Express equivalent: JSON.stringify(body)
+            import json
+            data = json.loads(request.body.decode('utf-8'))
+            # JSONをstring化してからUTF-8エンコード (Express互換)
+            processed_json = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+            return {
+                'content_type': 'application/json',
+                'data': data,
+                'encoding': 'utf-8',
+                'processed_body': processed_json.encode('utf-8')
+            }
+            
+        elif is_text_plain_request(request):
+            # text/plain - Express equivalent: Utils.toArray(body, 'utf8')
+            text_content = get_text_content(request)
+            return {
+                'content_type': 'text/plain',
+                'data': text_content,
+                'encoding': 'utf-8',
+                'processed_body': text_content.encode('utf-8')  # Express互換: UTF-8 bytes
+            }
+            
+        elif content_type == 'application/x-www-form-urlencoded' or content_type.startswith('application/x-www-form-urlencoded;'):
+            # URL-encoded form - Express equivalent: new URLSearchParams(body).toString()
+            from urllib.parse import parse_qs, urlencode
+            form_data = parse_qs(request.body.decode('utf-8'))
+            # フォームデータを再エンコード (Express互換)
+            processed_form = urlencode(form_data, doseq=True)
+            return {
+                'content_type': 'application/x-www-form-urlencoded',
+                'data': form_data,
+                'encoding': 'utf-8',
+                'processed_body': processed_form.encode('utf-8')
+            }
+            
+        else:
+            # Binary/unknown - raw bytes (Express: no processing)
+            return {
+                'content_type': content_type or 'application/octet-stream',
+                'data': request.body,
+                'encoding': 'binary',
+                'processed_body': request.body
+            }
+            
+    except Exception as e:
+        logger.warning(f"Failed to parse content for type '{content_type}': {e}")
+        # Fallback to raw bytes
+        return {
+            'content_type': content_type or 'application/octet-stream',
+            'data': request.body,
+            'encoding': 'binary',
+            'processed_body': request.body
+        }
+
+
+def get_uploaded_files(request: HttpRequest) -> Dict[str, UploadedFile]:
+    """
+    BSV認証済みリクエストからアップロードされたファイルを取得
+    
+    Args:
+        request: Django HTTP request (BSV authenticated)
+        
+    Returns:
+        dict: filename -> UploadedFile mapping
+    """
+    # Check if multipart_files was already parsed by decorator
+    if hasattr(request, 'multipart_files'):
+        return request.multipart_files  # type: ignore
+    
+    if is_multipart_request(request):
+        multipart_data = get_multipart_data(request)
+        result: Dict[str, Any] = multipart_data.get('files', {})
+        return result
+    return {}
+
+
+def get_multipart_fields(request: HttpRequest) -> Dict[str, Any]:
+    """
+    BSV認証済みリクエストからフォームフィールドを取得
+    
+    Args:
+        request: Django HTTP request (BSV authenticated)
+        
+    Returns:
+        dict: field_name -> field_value mapping
+    """
+    # Check if multipart_fields was already parsed by decorator
+    if hasattr(request, 'multipart_fields'):
+        return request.multipart_fields  # type: ignore
+    
+    if is_multipart_request(request):
+        multipart_data = get_multipart_data(request)
+        result: Dict[str, Any] = multipart_data.get('fields', {})
+        return result
+    return {}
+
+
+# ==================== BSV Authentication + File Upload Decorators ====================
+
+def handle_file_upload(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    ファイルアップロード対応デコレータ
+    BSV認証 + multipart/form-data処理
+    
+    Usage:
+        @handle_file_upload
+        def upload_view(request):
+            files = get_uploaded_files(request)
+            # ... handle files
+    """
+    @wraps(func)
+    def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
+        # BSV認証は既にミドルウェアで処理済み
+        
+        if is_multipart_request(request):
+            # multipart データを解析してrequestに追加
+            multipart_data = get_multipart_data(request)
+            request.multipart_fields = multipart_data['fields']
+            request.multipart_files = multipart_data['files']
+            
+            logger.debug(f"Added multipart data to request: {len(multipart_data['fields'])} fields, {len(multipart_data['files'])} files")
+        
+        return func(request, *args, **kwargs)
+    
+    return wrapper
+
+
+def bsv_file_upload_required(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    BSV認証 + ファイルアップロード必須デコレータ
+    
+    Usage:
+        @bsv_file_upload_required
+        def secure_upload_view(request):
+            identity_key = get_identity_key(request)
+            files = get_uploaded_files(request)
+            # ... secure file processing
+    """
+    @wraps(func)
+    def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
+        # BSV認証チェック
+        if not is_authenticated_request(request):
+            return JsonResponse({'error': 'BSV authentication required'}, status=401)
+        
+        # ファイルアップロードチェック
+        if not is_multipart_request(request):
+            return JsonResponse({'error': 'File upload required (multipart/form-data)'}, status=400)
+        
+        # multipart データを処理
+        multipart_data = get_multipart_data(request)
+        if not multipart_data['files']:
+            return JsonResponse({'error': 'No files uploaded'}, status=400)
+        
+        request.multipart_fields = multipart_data['fields']
+        request.multipart_files = multipart_data['files']
+        
+        logger.info(f"BSV authenticated file upload: {len(multipart_data['files'])} files from {get_identity_key(request)}")
+        
+        return func(request, *args, **kwargs)
+    
+    return wrapper

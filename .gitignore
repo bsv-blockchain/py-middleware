@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.log
+
+# Django
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# BSV Wallet Config (sensitive)
+*wallet_config.json
+
+# Logs
+*.log
+integration_errors.log
+
+# Development/Analysis Documents (work in progress)
+ARCHIVE_README.md
+CAMELCASE_ANALYSIS.md
+CODE_REVIEW_RESPONSE.md
+GO_EXPRESS_COMPARISON.md
+GO_EXPRESS_ENDPOINT_COMPARISON.md
+PYTHON_PORTING_CONSIDERATIONS.md
+PY_SDK_ISSUES_FOUND.md
+PY_SDK_WRAPPER_ANALYSIS.md
+
