@@ -203,3 +203,72 @@ def decorator_payment_example(request):
             'required': 500
         }
     })
+
+
+@require_http_methods(["GET", "POST"])
+@csrf_exempt
+def bsv_auth_wellknown(request):
+    """
+    /.well-known/bsv/auth エンドポイント
+    
+    BSV認証プロトコルのエンドポイント。
+    AuthMiddlewareが処理するため、このビューは通常到達しません。
+    
+    Note: CSRFチェックをバイパス（BSV認証プロトコルには不要）
+    """
+    return JsonResponse({
+        'service': 'BSV Authentication',
+        'version': '0.1',
+        'message': 'This endpoint is handled by BSVAuthMiddleware'
+    })
+
+
+@require_http_methods(["GET"])
+def hello_bsv_endpoint(request):
+    """
+    Hello BSV エンドポイント
+    
+    認証 + 支払いの両方が成功したら「Hello BSV」を返します。
+    テスト用のシンプルなエンドポイント。
+    """
+    print(f"[HELLO BSV VIEW] Processing request")
+    print(f"[HELLO BSV VIEW] request.auth: {hasattr(request, 'auth')}")
+    print(f"[HELLO BSV VIEW] request.payment: {hasattr(request, 'payment')}")
+    print(f"[HELLO BSV VIEW] request.bsv_payment: {hasattr(request, 'bsv_payment')}")
+    
+    identity_key = get_identity_key(request) or 'unknown'
+    payment_info = get_request_payment_info(request)
+    
+    print(f"[HELLO BSV VIEW] identity_key: {identity_key[:20] if identity_key != 'unknown' else 'unknown'}...")
+    print(f"[HELLO BSV VIEW] payment_info: {payment_info}")
+    print(f"[HELLO BSV VIEW] is_authenticated: {is_authenticated_request(request)}")
+    print(f"[HELLO BSV VIEW] is_payment_processed: {is_payment_processed(request)}")
+    
+    # 認証チェック
+    if not is_authenticated_request(request):
+        return JsonResponse({
+            'error': 'Authentication required',
+            'message': 'Please authenticate first',
+            'identity_key': identity_key
+        }, status=401)
+    
+    # 支払いチェック (500 satoshis)
+    required_payment = 500
+    if not is_payment_processed(request) or (payment_info and payment_info.satoshis_paid < required_payment):
+        return JsonResponse({
+            'error': 'Payment required',
+            'message': f'Please pay {required_payment} satoshis',
+            'required_payment': required_payment,
+            'paid_amount': payment_info.satoshis_paid if payment_info else 0
+        }, status=402)
+    
+    # 成功！(TypeScript equivalent response)
+    return JsonResponse({
+        'message': 'Hello BSV',
+        'success': True,
+        'authenticated': True,
+        'payment_received': True,
+        'identity_key': identity_key,
+        'satoshis_paid': payment_info.satoshis_paid if payment_info else 0,
+        'tx': payment_info.transaction_id if payment_info else None  # TypeScript: tx field (transaction data)
+    })

@@ -248,7 +248,7 @@ try:
     )
     
     # Add payment middleware to MIDDLEWARE list
-    MIDDLEWARE.append('__main__.PaymentMiddleware')
+    MIDDLEWARE.append('myproject.settings.PaymentMiddleware')
     print("✅ Payment middleware configured successfully")
     
 except Exception as e:

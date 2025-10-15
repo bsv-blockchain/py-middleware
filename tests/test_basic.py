@@ -194,7 +194,10 @@ class TestBSVMiddlewarePytest:
         
         # Test wallet operations
         pub_key = wallet.get_public_key()
-        assert pub_key == 'test_public_key_033f...'
+        # MockTestWallet returns a valid 33-byte compressed public key (66 hex chars)
+        assert pub_key == '02e46dcd7991e5a4bd642739249b0158312e1aee56a60fd1bf622172ffe65bd789'
+        assert len(pub_key) == 66  # 33 bytes * 2 (hex)
+        assert pub_key.startswith('02') or pub_key.startswith('03')  # Compressed key prefix
         
         signature = wallet.sign_message(b'test message')
         assert signature == b'test_signature'

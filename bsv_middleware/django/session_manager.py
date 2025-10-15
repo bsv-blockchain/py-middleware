@@ -92,7 +92,8 @@ class DjangoSessionManager:
         """
         try:
             session_key = f"{self._bsv_session_prefix}{identity_key}"
-            return self.session.get(session_key)
+            result: Optional[Dict[str, Any]] = self.session.get(session_key)
+            return result
         except Exception as e:
             logger.error(f"Failed to get session for {identity_key}: {e}")
             return None
@@ -190,8 +191,117 @@ class DjangoSessionManager:
         return time.time()
 
 
+class DjangoSessionManagerAdapter:
+    """
+    Adapter to make DjangoSessionManager compatible with py-sdk SessionManager interface.
+    
+    py-sdk Peer expects:
+    - add_session(session: PeerSession) -> None
+    - get_session(identifier: str) -> Optional[PeerSession]
+    """
+    
+    def __init__(self, django_session_manager: DjangoSessionManager):
+        self.django_sm = django_session_manager
+    
+    def add_session(self, session: Any) -> None:
+        """
+        Add a PeerSession to Django session storage.
+        
+        Args:
+            session: PeerSession object from py-sdk
+        """
+        try:
+            # Extract identity key from session
+            if hasattr(session, 'peer_identity_key') and session.peer_identity_key:
+                identity_key = session.peer_identity_key.hex() if hasattr(session.peer_identity_key, 'hex') else str(session.peer_identity_key)
+            else:
+                logger.warning("PeerSession without peer_identity_key, cannot save")
+                return
+            
+            # Serialize PeerSession to dict
+            session_data = {
+                'is_authenticated': getattr(session, 'is_authenticated', False),
+                'session_nonce': getattr(session, 'session_nonce', ''),
+                'peer_nonce': getattr(session, 'peer_nonce', ''),
+                'peer_identity_key': identity_key,
+                'last_update': getattr(session, 'last_update', 0)
+            }
+            
+            self.django_sm.create_session(identity_key, session_data)
+            logger.debug(f"Saved PeerSession for {identity_key[:20]}...")
+            
+        except Exception as e:
+            logger.error(f"Failed to add session: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def get_session(self, identifier: str) -> Optional[Any]:
+        """
+        Get a PeerSession from Django session storage.
+        
+        Args:
+            identifier: Identity key (public key hex)
+            
+        Returns:
+            PeerSession object or None
+        """
+        try:
+            session_data = self.django_sm.get_session(identifier)
+            
+            if not session_data or 'auth_data' not in session_data:
+                return None
+            
+            auth_data = session_data['auth_data']
+            
+            # Deserialize dict to PeerSession
+            try:
+                from bsv.auth.peer_session import PeerSession
+                from bsv.keys import PublicKey
+            except ImportError:
+                logger.error("Cannot import PeerSession from py-sdk")
+                return None
+            
+            # Reconstruct PeerSession
+            peer_identity_key = None
+            if 'peer_identity_key' in auth_data:
+                try:
+                    peer_identity_key = PublicKey(auth_data['peer_identity_key'])
+                except Exception as e:
+                    logger.warning(f"Failed to parse peer_identity_key: {e}")
+            
+            peer_session = PeerSession(
+                is_authenticated=auth_data.get('is_authenticated', False),
+                session_nonce=auth_data.get('session_nonce', ''),
+                peer_nonce=auth_data.get('peer_nonce', ''),
+                peer_identity_key=peer_identity_key,
+                last_update=auth_data.get('last_update', 0)
+            )
+            
+            return peer_session
+            
+        except Exception as e:
+            logger.error(f"Failed to get session for {identifier}: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    def has_session(self, identifier: str) -> bool:
+        """Check if session exists."""
+        return self.django_sm.has_session(identifier)
+    
+    def update_session(self, session: Any) -> None:
+        """
+        Update an existing PeerSession.
+        
+        Args:
+            session: Updated PeerSession object
+        """
+        # Simply call add_session, which will overwrite
+        self.add_session(session)
+
+
 # Factory function for easy instantiation
-def create_django_session_manager(session) -> DjangoSessionManager:
+def create_django_session_manager(session: Any) -> DjangoSessionManager:
     """
     Create a Django session manager instance.
     
