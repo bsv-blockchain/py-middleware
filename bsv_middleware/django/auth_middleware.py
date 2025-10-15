@@ -127,8 +127,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
                     certificates_to_request=self.certificates_to_request,
                     session_manager=session_mgr,
                     auto_persist_last_session=True,
-                    logger=logger,
-                    debug=(self.log_level == LogLevel.DEBUG)
+                    logger=logger
                 )
                 
                 self.peer = Peer(peer_options)
