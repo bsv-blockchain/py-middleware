@@ -82,7 +82,7 @@ class BSVPayment:
     satoshis: int
     transaction: Optional[Dict[str, Any]] = None
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate payment data after initialization"""
         if self.satoshis < 0:
             raise ValueError("satoshis cannot be negative")
@@ -137,7 +137,7 @@ class AuthMiddlewareOptions:
     logger: Optional[Any] = None
     log_level: LogLevel = LogLevel.INFO
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration after initialization"""
         if not hasattr(self.wallet, 'sign_message'):
             raise ValueError("wallet must implement WalletInterface")
@@ -149,7 +149,7 @@ class PaymentMiddlewareOptions:
     wallet: WalletInterface
     calculate_request_price: CalculateRequestPriceCallback
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration after initialization"""
         if not callable(self.calculate_request_price):
             raise ValueError("calculate_request_price must be callable")

@@ -22,10 +22,11 @@ INSTALLED_APPS = [
 ]
 
 # Test middleware configuration
+# Note: For payment-only tests, we can disable auth middleware
 MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'bsv_middleware.django.auth_middleware.BSVAuthMiddleware',
+    # 'bsv_middleware.django.auth_middleware.BSVAuthMiddleware',  # Disabled for payment-only tests
     'bsv_middleware.django.payment_middleware.BSVPaymentMiddleware',
 ]
 
@@ -63,6 +64,7 @@ class MockTestWallet:
 BSV_MIDDLEWARE = {
     'WALLET': MockTestWallet(),
     'ALLOW_UNAUTHENTICATED': True,
-    'CALCULATE_REQUEST_PRICE': lambda request: 100,
+    'REQUIRE_AUTH': False,  # Allow payment middleware without auth middleware
+    'CALCULATE_REQUEST_PRICE': lambda request: 500 if '/premium/' in request.path else 300 if '/decorator-payment/' in request.path else 0,
     'LOG_LEVEL': 'debug',
 }

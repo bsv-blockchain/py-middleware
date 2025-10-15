@@ -38,11 +38,13 @@ try:
         
         def sign_message(self, message: bytes) -> bytes:
             """Sign a message with the wallet."""
-            return self.wallet.sign_message(message)
+            result: bytes = self.wallet.sign_message(message)
+            return result
         
         def get_public_key(self) -> str:
             """Get the wallet's public key."""
-            return self.wallet.public_key.to_hex()
+            result: str = self.wallet.public_key.to_hex()
+            return result
         
         def internalize_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
             """Process an action (transaction) with the wallet."""
@@ -73,7 +75,7 @@ except ImportError as e:
             """Mock public key."""
             return 'mock_public_key_033f...'
         
-        def internalize_action(self, action: dict) -> dict:
+        def internalize_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
             """Mock action internalization."""
             return {
                 'accepted': True,
@@ -81,17 +83,17 @@ except ImportError as e:
                 'transactionId': 'mock_tx_id_12345'
             }
     
-    bsv_wallet = MockWallet()
+    bsv_wallet: Any = MockWallet()  # type: ignore
 
 # Certificate received callback
-def handle_certificates_received(sender_public_key, certificates, request, response):
+def handle_certificates_received(sender_public_key: str, certificates: Any, request: Any, response: Any) -> None:
     """Handle received certificates."""
     print(f"Received {len(certificates)} certificates from {sender_public_key}")
     for cert in certificates:
         print(f"Certificate type: {getattr(cert, 'type', 'unknown')}")
 
 # Price calculation function
-def calculate_request_price(request):
+def calculate_request_price(request: Any) -> int:
     """Calculate the price for a request."""
     # Free endpoints
     if request.path.startswith('/free/'):
@@ -150,7 +152,7 @@ class BSVMiddlewareSettings:
     configuration from Django settings.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         self._settings = self._load_settings()
     
     def _load_settings(self) -> Dict[str, Any]:
@@ -169,12 +171,14 @@ class BSVMiddlewareSettings:
                 "BSV_MIDDLEWARE['WALLET'] is required. "
                 "Please configure a wallet instance in your Django settings."
             )
-        return wallet
+        result: WalletInterface = wallet
+        return result
     
     @property
     def allow_unauthenticated(self) -> bool:
         """Whether to allow unauthenticated requests."""
-        return self._settings.get('ALLOW_UNAUTHENTICATED', False)
+        result: bool = bool(self._settings.get('ALLOW_UNAUTHENTICATED', False))
+        return result
     
     @property
     def calculate_request_price(self) -> CalculateRequestPriceCallback:
@@ -189,7 +193,8 @@ class BSVMiddlewareSettings:
                 "BSV_MIDDLEWARE['CALCULATE_REQUEST_PRICE'] must be a callable function."
             )
         
-        return price_func
+        result: CalculateRequestPriceCallback = price_func
+        return result
     
     @property
     def certificate_requests(self) -> Optional[Dict[str, Any]]:
@@ -314,7 +319,8 @@ def get_settings_template() -> Dict[str, Any]:
     
     This can be used as a reference for configuring the middleware.
     """
-    return BSV_MIDDLEWARE_TEMPLATE.copy()
+    result: Dict[str, Any] = dict(BSV_MIDDLEWARE_TEMPLATE)
+    return result
 
 
 # Example settings configurations
@@ -359,4 +365,6 @@ def get_example_settings(environment: str = 'minimal') -> Dict[str, Any]:
     if environment not in EXAMPLE_SETTINGS:
         raise ValueError(f"Unknown environment: {environment}")
     
-    return EXAMPLE_SETTINGS[environment].copy()
+    env_settings: Dict[str, Any] = EXAMPLE_SETTINGS[environment]  # type: ignore
+    result: Dict[str, Any] = dict(env_settings)
+    return result

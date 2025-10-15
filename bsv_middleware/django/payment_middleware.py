@@ -93,6 +93,9 @@ class BSVPaymentMiddleware(MiddlewareMixin):
                 raise BSVServerMisconfiguredException(
                     'The CALCULATE_REQUEST_PRICE option must be a callable function.'
                 )
+            
+            # Optional: whether auth middleware is required
+            self.require_auth = bsv_config.get('REQUIRE_AUTH', True)
                 
         except Exception as e:
             logger.error(f"Failed to load BSV payment configuration: {e}")
@@ -173,13 +176,26 @@ class BSVPaymentMiddleware(MiddlewareMixin):
         Direct port of Express payment middleware logic.
         """
         # Check if auth middleware has run (equivalent to Express auth check)
-        if not hasattr(request, 'auth') or not hasattr(request.auth, 'identity_key'):
+        # Skip this check if REQUIRE_AUTH is False (for payment-only scenarios)
+        
+        # Debug: Check auth state
+        print(f"[PAYMENT DEBUG] require_auth: {self.require_auth}")
+        print(f"[PAYMENT DEBUG] has request.auth: {hasattr(request, 'auth')}")
+        if hasattr(request, 'auth'):
+            print(f"[PAYMENT DEBUG] request.auth.identity_key: {getattr(request.auth, 'identity_key', 'NO IDENTITY_KEY')}")
+        
+        if self.require_auth and (not hasattr(request, 'auth') or not hasattr(request.auth, 'identity_key')):
             logger.error("Payment middleware executed before Auth middleware")
             return JsonResponse({
                 'status': 'error',
                 'code': ERR_SERVER_MISCONFIGURED,
                 'description': 'The payment middleware must be executed after the Auth middleware.'
             }, status=500)
+        
+        # If auth middleware is not required, create a minimal auth object
+        if not self.require_auth and not hasattr(request, 'auth'):
+            from types import SimpleNamespace
+            request.auth = SimpleNamespace(identity_key=None)
         
         # Calculate request price (equivalent to Express calculateRequestPrice)
         try:
@@ -202,8 +218,15 @@ class BSVPaymentMiddleware(MiddlewareMixin):
         # Check for payment header (equivalent to Express bsvPaymentHeader check)
         bsv_payment_header = request.headers.get(BSV_PAYMENT_HEADER)
         
+        print(f"[PAYMENT DEBUG] BSV_PAYMENT_HEADER: {BSV_PAYMENT_HEADER}")
+        print(f"[PAYMENT DEBUG] bsv_payment_header exists: {bool(bsv_payment_header)}")
+        if bsv_payment_header:
+            print(f"[PAYMENT DEBUG] payment header length: {len(bsv_payment_header)}")
+            print(f"[PAYMENT DEBUG] payment header preview: {bsv_payment_header[:100]}...")
+        
         if not bsv_payment_header:
             # Request payment (equivalent to Express 402 response)
+            print(f"[PAYMENT DEBUG] No payment header, requesting payment: {request_price} satoshis")
             return self._request_payment(request, request_price)
         
         # Verify and process payment
@@ -266,12 +289,22 @@ class BSVPaymentMiddleware(MiddlewareMixin):
             
             accepted = result.get('accepted', False)
             
-            # Set payment info on request (equivalent to Express req.payment)
-            request.payment = PaymentInfo(
+            # Set payment info on request (TypeScript equivalent: req.payment)
+            # TypeScript: { satoshisPaid, accepted, tx: paymentData.transaction }
+            payment_info = PaymentInfo(
                 satoshis_paid=request_price,
                 accepted=accepted,
-                transaction_id=result.get('transactionId')
+                transaction_id=payment_data.transaction  # TypeScript: tx field (transaction data, not TXID)
             )
+            
+            print(f"[PAYMENT DEBUG] Payment processed - TypeScript equivalent")
+            print(f"[PAYMENT DEBUG] satoshis_paid: {request_price}")
+            print(f"[PAYMENT DEBUG] accepted: {accepted}")
+            print(f"[PAYMENT DEBUG] transaction_data: {payment_data.transaction[:40] if payment_data.transaction else 'None'}...")
+            
+            # Set both attributes for compatibility
+            request.payment = payment_info
+            request.bsv_payment = payment_info  # For utils.py compatibility
             
             # Add success header (equivalent to Express res.set)
             # This will be added in process_response if needed
