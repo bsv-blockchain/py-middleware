@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any, Callable
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
 
-from ..types import (
+from bsv_middleware.types import (
     WalletInterface,
     LogLevel,
     CertificatesReceivedCallback,

@@ -8,6 +8,8 @@ from . import views
 urlpatterns = [
     # BSV Authentication endpoint
     path('.well-known/bsv/auth', views.bsv_auth_wellknown, name='bsv_auth'),
+    # Compatibility alias for clients expecting /.well-known/auth
+    path('.well-known/auth', views.bsv_auth_wellknown, name='bsv_auth_compat'),
     
     # Simple test endpoint
     path('test/', views.simple_test, name='simple_test'),

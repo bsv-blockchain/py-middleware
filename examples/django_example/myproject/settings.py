@@ -239,7 +239,7 @@ BSV_MIDDLEWARE = {
 
 # Create Payment Middleware using Phase 2.3 implementation
 try:
-    from bsv_middleware.django.payment_middleware_complete import create_payment_middleware
+    from django_adapter.payment_middleware_complete import create_payment_middleware
     
     # Create payment middleware with our settings
     PaymentMiddleware = create_payment_middleware(

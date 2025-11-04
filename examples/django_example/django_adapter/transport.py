@@ -10,7 +10,7 @@ import logging
 from typing import Optional, Dict, Any, Callable, List, TYPE_CHECKING
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
-from ..types import (
+from bsv_middleware.types import (
     LogLevel,
     BSV_AUTH_PREFIX,
     AuthInfo, 
@@ -33,8 +33,8 @@ else:
         Transport = Any  # type: ignore
         PY_SDK_AVAILABLE = False
 
-from ..exceptions import BSVAuthException, BSVServerMisconfiguredException
-from ..py_sdk_bridge import PySdkBridge
+from bsv_middleware.exceptions import BSVAuthException, BSVServerMisconfiguredException
+from bsv_middleware.py_sdk_bridge import PySdkBridge
 
 logger = logging.getLogger(__name__)
 
@@ -690,7 +690,7 @@ class DjangoTransport(Transport):
                     
                     if session and getattr(session, 'is_authenticated', False):
                         # Success - set request.auth like Express middleware
-                        from ..types import AuthInfo
+                        from bsv_middleware.types import AuthInfo
                         request.auth = AuthInfo(
                             identity_key=identity_key.hex(),
                             authenticated=True,
@@ -714,7 +714,7 @@ class DjangoTransport(Transport):
             # No authenticated session - handle based on allow_unauthenticated
             if self.allow_unauthenticated:
                 # Express equivalent: req.auth = { identityKey: 'unknown' }
-                from ..types import AuthInfo
+                from bsv_middleware.types import AuthInfo
                 request.auth = AuthInfo(identity_key='unknown', authenticated=False)
                 
                 self._log('debug', 'Unauthenticated request allowed')
@@ -1252,7 +1252,7 @@ class DjangoTransport(Transport):
                     })
                     
                     # ✅ TypeScript版と同じ: req.auth = { identityKey: senderPublicKey }
-                    from ..types import AuthInfo
+                    from bsv_middleware.types import AuthInfo
                     identity_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
                     request.auth = AuthInfo(identity_key=identity_key_hex)
                     
@@ -1287,6 +1287,147 @@ class DjangoTransport(Transport):
             self._log('error', f'Failed to setup general message listener: {e}')
             return 'error'
     
+    def _build_general_message_payload(self, request: HttpRequest) -> bytes:
+        """
+        Build General Message payload from Django request (matching TypeScript buildAuthMessageFromRequest).
+        
+        Format:
+        - Request ID (base64 decoded bytes)
+        - Method (VarInt length + UTF-8 bytes)
+        - Pathname (VarInt length + UTF-8 bytes, or -1)
+        - Search (VarInt length + UTF-8 bytes, or -1)
+        - Headers count (VarInt)
+        - For each header: Key (VarInt length + UTF-8 bytes) + Value (VarInt length + UTF-8 bytes)
+        - Body (VarInt length + raw bytes, or -1)
+        """
+        import base64
+        from urllib.parse import urlparse
+        
+        def encode_varint(n: int) -> bytes:
+            """Encode integer as VarInt (matching TypeScript SDK)"""
+            if n == -1:
+                # TypeScript: -1 becomes 2^64 - 1 = 0xFFFFFFFFFFFFFFFF
+                return bytes([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
+            if n < 0:
+                n = n + (2 ** 64)
+            
+            if n < 0xfd:
+                return bytes([n])
+            elif n <= 0xffff:
+                return b'\xfd' + n.to_bytes(2, 'little')
+            elif n <= 0xffffffff:
+                return b'\xfe' + n.to_bytes(4, 'little')
+            else:
+                return b'\xff' + n.to_bytes(8, 'little')
+        
+        def encode_string(s: str) -> bytes:
+            """Encode string with VarInt length prefix"""
+            s_bytes = s.encode('utf-8')
+            return encode_varint(len(s_bytes)) + s_bytes
+        
+        payload = b''
+        
+        # 1. Request ID (base64 decoded)
+        request_id = request.headers.get('x-bsv-auth-request-id', '')
+        if request_id:
+            try:
+                request_id_bytes = base64.b64decode(request_id)
+                payload += request_id_bytes
+                print(f"[SERVER DEBUG] Request ID decoded: {len(request_id_bytes)} bytes")
+            except Exception as e:
+                print(f"[SERVER DEBUG] Failed to decode request_id: {e}")
+                self._log('warn', f'Failed to decode request_id: {e}')
+                payload += b''  # Empty bytes if decode fails
+        else:
+            print(f"[SERVER DEBUG] No request_id header found")
+            payload += b''  # Empty bytes if no request_id
+        
+        # 2. Method
+        method = request.method
+        method_encoded = encode_string(method)
+        payload += method_encoded
+        print(f"[SERVER DEBUG] Method '{method}' encoded: {len(method_encoded)} bytes")
+        
+        # 3. Parse URL into pathname and search
+        # Build full URL from request
+        protocol = 'https' if request.is_secure() else 'http'
+        host = request.get_host()
+        full_path = request.get_full_path()
+        full_url = f"{protocol}://{host}{full_path}"
+        parsed = urlparse(full_url)
+        
+        print(f"[SERVER DEBUG] Full URL: {full_url}")
+        print(f"[SERVER DEBUG] Pathname: {parsed.path}")
+        print(f"[SERVER DEBUG] Query: {parsed.query}")
+        
+        # Pathname
+        if parsed.path:
+            pathname_encoded = encode_string(parsed.path)
+            payload += pathname_encoded
+            print(f"[SERVER DEBUG] Pathname encoded: {len(pathname_encoded)} bytes")
+        else:
+            pathname_encoded = encode_varint(-1)
+            payload += pathname_encoded
+            print(f"[SERVER DEBUG] Pathname is empty, encoded: {len(pathname_encoded)} bytes")
+        
+        # Search (query string with ?)
+        if parsed.query:
+            search_with_question = '?' + parsed.query
+            search_encoded = encode_string(search_with_question)
+            payload += search_encoded
+            print(f"[SERVER DEBUG] Search encoded: {len(search_encoded)} bytes")
+        else:
+            search_encoded = encode_varint(-1)
+            payload += search_encoded
+            print(f"[SERVER DEBUG] Search is empty, encoded: {len(search_encoded)} bytes")
+        
+        # 4. Headers (filtered and sorted)
+        # Include only headers that match TypeScript logic:
+        # - x-bsv-* (but not x-bsv-auth-*)
+        # - content-type (normalized)
+        # - authorization
+        filtered_headers = []
+        for key, value in request.headers.items():
+            key_lower = key.lower()
+            # Normalize content-type by removing parameters
+            if key_lower == 'content-type':
+                value = value.split(';')[0].strip()
+            # Include matching headers
+            if (key_lower.startswith('x-bsv-') and not key_lower.startswith('x-bsv-auth-')) or \
+               key_lower in ['content-type', 'authorization']:
+                filtered_headers.append((key_lower, value))
+        
+        # Sort by key
+        filtered_headers.sort(key=lambda x: x[0])
+        
+        headers_count = len(filtered_headers)
+        payload += encode_varint(headers_count)
+        print(f"[SERVER DEBUG] Filtered headers count: {headers_count}")
+        headers_total_bytes = 0
+        for key, value in filtered_headers:
+            key_encoded = encode_string(key)
+            value_encoded = encode_string(value)
+            payload += key_encoded
+            payload += value_encoded
+            headers_total_bytes += len(key_encoded) + len(value_encoded)
+            print(f"[SERVER DEBUG] Header: {key}={value[:50]}... ({len(key_encoded) + len(value_encoded)} bytes)")
+        print(f"[SERVER DEBUG] Headers total: {headers_total_bytes} bytes")
+        
+        # 5. Body
+        body = request.body if hasattr(request, 'body') else b''
+        if body:
+            body_encoded_len = encode_varint(len(body))
+            payload += body_encoded_len
+            payload += body
+            print(f"[SERVER DEBUG] Body: {len(body)} bytes (encoded length: {len(body_encoded_len)} bytes)")
+        else:
+            body_encoded = encode_varint(-1)
+            payload += body_encoded
+            print(f"[SERVER DEBUG] Body is empty (encoded: {len(body_encoded)} bytes)")
+        
+        print(f"[SERVER DEBUG] Total payload size: {len(payload)} bytes")
+        return payload
+    
     def _build_auth_message_from_request(self, request: HttpRequest) -> Any:
         """
         Build AuthMessage from Django request headers and body.
@@ -1316,18 +1457,27 @@ class DjangoTransport(Transport):
                 except Exception as e:
                     self._log('warn', f'Failed to parse requested certificates: {e}')
             
-            # Add request body as payload for general messages
-            # Keep payload as raw bytes to match py-sdk Peer signing expectations
-            if request.body and len(request.body) > 0:
-                message_data['payload'] = request.body  # bytes
-                # Debug: log request body for comparison with client
+            # Build payload for general messages (matching TypeScript buildAuthMessageFromRequest)
+            # This constructs the full payload including request ID, method, URL, headers, and body
+            if message_data['messageType'] == 'general':
+                payload = self._build_general_message_payload(request)
+                message_data['payload'] = payload
+                # Debug: log payload digest for comparison with client (force print for debugging)
                 try:
                     import hashlib
-                    body_digest = hashlib.sha256(request.body).digest()
-                    self._log('debug', f'Server request.body digest_head: {body_digest[:32].hex()}')
-                except Exception:
-                    pass
+                    payload_digest = hashlib.sha256(payload).digest()
+                    print(f"[SERVER DEBUG] Payload digest: {payload_digest.hex()[:64]}")
+                    print(f"[SERVER DEBUG] Payload length: {len(payload)} bytes")
+                    print(f"[SERVER DEBUG] Request ID: {request.headers.get('x-bsv-auth-request-id', 'N/A')[:30]}...")
+                    print(f"[SERVER DEBUG] Method: {request.method}, Path: {request.path}")
+                    print(f"[SERVER DEBUG] Full URL: {request.build_absolute_uri()}")
+                    self._log('info', f'[SERVER] Payload digest: {payload_digest.hex()[:64]}')
+                    self._log('info', f'[SERVER] Payload length: {len(payload)} bytes')
+                except Exception as e:
+                    print(f"[SERVER DEBUG] Failed to log payload digest: {e}")
+                    self._log('warn', f'Failed to log payload digest: {e}')
             else:
+                # For non-general messages, use empty payload
                 message_data['payload'] = b""
             
             # Convert signature from hex to bytes
@@ -1390,9 +1540,14 @@ class DjangoTransport(Transport):
                 # Convert identityKey hex string to PublicKey object
                 if key in ['identityKey', 'identity_key'] and isinstance(value, str):
                     try:
+                        # PublicKey expects hex string, convert it to bytes first
+                        # if it looks like a hex string
+                        if len(value) in [66, 130]:  # Compressed or uncompressed public key hex
+                            value = bytes.fromhex(value)
                         value = PublicKey(value)
                     except Exception as e:
-                        self._log('warning', f'Failed to convert identity key to PublicKey: {e}')
+                        self._log('error', f'Failed to convert identity key to PublicKey: {e}, keeping as string')
+                        # Keep as string for debugging, but this will likely cause issues downstream
                 
                 converted_data[converted_key] = value
             

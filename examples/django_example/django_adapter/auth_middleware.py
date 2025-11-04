@@ -11,7 +11,7 @@ from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
-from ..types import (
+from bsv_middleware.types import (
     WalletInterface,
     AuthMiddlewareOptions,
     LogLevel,
@@ -19,11 +19,11 @@ from ..types import (
     AuthInfo,
     BSVErrorCodes
 )
-from ..exceptions import (
+from bsv_middleware.exceptions import (
     BSVAuthException,
     BSVServerMisconfiguredException
 )
-from ..py_sdk_bridge import PySdkBridge, create_py_sdk_bridge
+from bsv_middleware.py_sdk_bridge import PySdkBridge, create_py_sdk_bridge
 from .transport import DjangoTransport, create_django_transport
 from .session_manager import DjangoSessionManager, create_django_session_manager
 
@@ -107,7 +107,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
             # 🎯 実際の Peer インスタンス作成 (Express 同等)
             try:
                 # wallet を py-sdk 互換形式にアダプト
-                from ..wallet_adapter import create_wallet_adapter
+                from bsv_middleware.wallet_adapter import create_wallet_adapter
                 adapted_wallet = create_wallet_adapter(self.wallet)
                 
                 # session manager を作成 (DefaultSessionManager使用)
@@ -127,8 +127,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
                     certificates_to_request=self.certificates_to_request,
                     session_manager=session_mgr,
                     auto_persist_last_session=True,
-                    logger=logger,
-                    debug=(self.log_level == LogLevel.DEBUG)
+                    logger=logger
                 )
                 
                 self.peer = Peer(peer_options)
@@ -215,7 +214,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
             
             # Ensure request.auth is set for payment middleware
             if not hasattr(request, 'auth') or request.auth is None:
-                from ..types import AuthInfo
+                from bsv_middleware.types import AuthInfo
                 request.auth = AuthInfo(identity_key='unknown')
             
             # Continue processing (return None to continue to view)

@@ -173,7 +173,7 @@ class RealBSVAuthTester:
         """Middlewareとの統合テスト"""
         try:
             # BSV Middleware コンポーネントテスト
-            from bsv_middleware.django.utils import get_identity_key, debug_request_info
+            from examples.django_example.django_adapter.utils import get_identity_key, debug_request_info
             
             # Request情報デバッグ
             debug_info = debug_request_info(request)

@@ -17,7 +17,7 @@ from bsv.wallet.wallet_impl import WalletImpl
 from bsv.keys import PrivateKey
 
 # Middleware imports
-from bsv_middleware.django.auth_middleware import BSVAuthMiddleware
+from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
 
 
 class TestMiddlewareAuthentication:

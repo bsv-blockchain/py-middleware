@@ -12,7 +12,7 @@ from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
-from ..types import (
+from bsv_middleware.types import (
     WalletInterface,
     PaymentMiddlewareOptions,
     CalculateRequestPriceCallback,
@@ -27,14 +27,14 @@ from ..types import (
     ERR_PAYMENT_INTERNAL,
     ERR_SERVER_MISCONFIGURED
 )
-from ..exceptions import (
+from bsv_middleware.exceptions import (
     BSVPaymentException,
     BSVPaymentRequiredException,
     BSVMalformedPaymentException,
     BSVInvalidDerivationPrefixException,
     BSVServerMisconfiguredException
 )
-from ..py_sdk_bridge import PySdkBridge, create_py_sdk_bridge
+from bsv_middleware.py_sdk_bridge import PySdkBridge, create_py_sdk_bridge
 
 logger = logging.getLogger(__name__)
 
