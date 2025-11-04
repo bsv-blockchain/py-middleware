@@ -32,8 +32,8 @@ except ImportError:
     pytest.skip("py-sdk not installed", allow_module_level=True)
 
 # Middleware imports
-from bsv_middleware.django.auth_middleware import BSVAuthMiddleware
-from bsv_middleware.django.transport import DjangoTransport
+from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
+from examples.django_example.django_adapter.transport import DjangoTransport
 from bsv_middleware.py_sdk_bridge import PySdkBridge
 
 

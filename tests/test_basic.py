@@ -7,9 +7,9 @@ from django.test import TestCase, RequestFactory
 from django.http import JsonResponse
 
 from bsv_middleware.types import AuthInfo, PaymentInfo, LogLevel
-from bsv_middleware.django.auth_middleware import BSVAuthMiddleware
-from bsv_middleware.django.payment_middleware import BSVPaymentMiddleware
-from bsv_middleware.django.utils import (
+from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
+from examples.django_example.django_adapter.payment_middleware import BSVPaymentMiddleware
+from examples.django_example.django_adapter.utils import (
     extract_bsv_headers,
     get_identity_key,
     is_authenticated_request

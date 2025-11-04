@@ -11,7 +11,7 @@ from functools import wraps
 from django.http import JsonResponse, HttpRequest
 from django.core.files.uploadedfile import UploadedFile
 from django.http.multipartparser import MultiPartParser
-from ..types import AuthInfo, PaymentInfo
+from bsv_middleware.types import AuthInfo, PaymentInfo
 
 import logging
 logger = logging.getLogger(__name__)

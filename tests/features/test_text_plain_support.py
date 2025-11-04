@@ -12,7 +12,7 @@ from django.conf import settings
 from unittest.mock import Mock, patch
 import json
 
-from bsv_middleware.django.utils import (
+from examples.django_example.django_adapter.utils import (
     is_text_plain_request,
     get_text_content, 
     get_content_by_type

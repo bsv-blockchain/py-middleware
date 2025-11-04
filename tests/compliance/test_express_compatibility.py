@@ -268,7 +268,7 @@ class ExpressCompatibilityTester:
         print("\n🛠️ Testing Utility Functions Compatibility")
         print("-" * 45)
         
-        from bsv_middleware.django.utils import (
+        from examples.django_example.django_adapter.utils import (
             format_satoshis, get_identity_key, is_authenticated_request,
             create_bsv_response
         )
