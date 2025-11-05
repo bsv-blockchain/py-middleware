@@ -8,7 +8,7 @@ py-sdk usage patterns.
 
 import json
 import logging
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
+from typing import Optional, Dict, Any, List, TYPE_CHECKING, Callable
 
 # Import py-sdk modules with proper type checking support
 PY_SDK_AVAILABLE = False  # Initialize before conditional import
@@ -24,13 +24,10 @@ else:
     # At runtime, try to import, fall back to Any if not available
     try:
         from bsv.auth import Peer, PeerOptions, Transport, SessionManager
-        # Skip VerifiableCertificate for now (not essential for payment processing)
-        # from bsv.auth.certificate import VerifiableCertificate
         from bsv.auth.requested_certificate_set import RequestedCertificateSet
         from bsv.auth.transports.transport import Transport as BaseTransport
-        # Skip Wallet import - use WalletImpl directly
-        PY_SDK_AVAILABLE = False  # Temporarily disable for stable testing
-        print("[PY_SDK_BRIDGE] py-sdk disabled for stable testing")
+        # Enable py-sdk when imports succeed
+        PY_SDK_AVAILABLE = True
     except ImportError as e:
         logging.warning(f"py-sdk not available: {e}")
         PY_SDK_AVAILABLE = False
@@ -49,7 +46,8 @@ from .exceptions import (
     BSVAuthException,
     BSVPaymentException,
     BSVMalformedPaymentException,
-    BSVInvalidDerivationPrefixException
+    BSVInvalidDerivationPrefixException,
+    BSVServerMisconfiguredException
 )
 
 logger = logging.getLogger(__name__)
@@ -68,8 +66,12 @@ class PySdkBridge:
         self.peer: Optional[Peer] = None
         self.transport: Optional[Transport] = None
         
-        if PY_SDK_AVAILABLE:
-            self._initialize_py_sdk_components()
+        if not PY_SDK_AVAILABLE:
+            raise BSVServerMisconfiguredException(
+                message="py-sdk is required but not available",
+                details={"module": "py_sdk_bridge", "hint": "Install py-sdk and ensure it is importable"}
+            )
+        self._initialize_py_sdk_components()
     
     def _initialize_py_sdk_components(self) -> None:
         """Initialize py-sdk components."""
@@ -84,8 +86,7 @@ class PySdkBridge:
                 certificates_to_request=None,  # Will be set by middleware
                 session_manager=None,  # Will use default
                 auto_persist_last_session=True,
-                logger=logger,
-                debug=False
+                logger=logger
             )
             
             # Create peer (equivalent to Express new Peer())
@@ -370,23 +371,26 @@ class DjangoTransport(BaseTransport):
     def __init__(self) -> None:
         super().__init__()
         self.peer: Optional[Peer] = None
-        self.message_callback: Optional[Any] = None  # Callable type
+        self.message_callback: Optional[Callable[[Any, Any], Optional[Exception]]] = None
     
     def set_peer(self, peer: Peer) -> None:
         """Set the peer instance."""
         self.peer = peer
     
-    def on_data(self, callback: Any) -> Optional[str]:  # Callable type
-        """Set the message callback."""
+    def on_data(self, callback: Callable[[Any, Any], Optional[Exception]]) -> Optional[Exception]:
+        """Set the message callback (ctx, message) -> Optional[Exception]."""
         self.message_callback = callback
-        return None  # No error
-    
-    def send_message(self, message: Any) -> Optional[str]:
-        """Send a message through the transport."""
-        # This would be implemented based on Django's HTTP response
-        # For now, just log the message
-        logger.debug(f"Sending message: {message}")
-        return None  # No error
+        return None
+
+    def send(self, ctx: Any, message: Any) -> Optional[Exception]:
+        """Send an AuthMessage to the registered on_data handler."""
+        if self.message_callback is None:
+            return Exception("Transport has no on_data listener registered")
+        try:
+            return self.message_callback(ctx, message)
+        except Exception as e:
+            # Return the exception per interface contract (do not raise)
+            return e
 
 
 def create_py_sdk_bridge(wallet: WalletInterface) -> PySdkBridge:

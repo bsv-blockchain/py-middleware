@@ -6,6 +6,7 @@ Real BSV Authentication Testing
 import os
 import sys
 import json
+import pytest
 from pathlib import Path
 
 # Setup
@@ -322,3 +323,26 @@ def main():
 if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
+
+
+# Pytest形式のテスト関数
+@pytest.mark.skipif(not py_sdk_available, reason="py-sdk not available")
+def test_real_bsv_signature_verification():
+    """Pytest形式: 実際のBSV署名検証テスト"""
+    tester = RealBSVAuthTester()
+    result = tester.test_signature_verification()
+    assert result, "Signature verification should succeed"
+
+@pytest.mark.skipif(not py_sdk_available, reason="py-sdk not available")
+def test_real_bsv_auth_flow():
+    """Pytest形式: 実際のBSV認証フローテスト"""
+    tester = RealBSVAuthTester()
+    result = tester.test_real_bsv_auth_flow()
+    assert result, "Auth flow should succeed"
+
+@pytest.mark.skipif(not py_sdk_available, reason="py-sdk not available")
+def test_real_bsv_certificate_creation():
+    """Pytest形式: 実際のBSV証明書作成テスト"""
+    tester = RealBSVAuthTester()
+    result = tester.test_real_certificate_creation()
+    assert result is not None, "Certificate creation should succeed"

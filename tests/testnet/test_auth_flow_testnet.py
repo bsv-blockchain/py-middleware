@@ -183,7 +183,7 @@ class TestTestnetAuthFlow:
         # 設定 (testnet テストでは ALLOW_UNAUTHENTICATED=True)
         settings.BSV_MIDDLEWARE = {
             'WALLET': self.wallet,
-            'ALLOW_UNAUTHENTICATED': True,  # testnet では認証なしを許可
+            'ALLOW_UNAUTHENTICATED': False,  # testnet では認証なしを許可
         }
         
         middleware = BSVAuthMiddleware(dummy_view)

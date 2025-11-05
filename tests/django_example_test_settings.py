@@ -131,7 +131,7 @@ def handle_test_certificates_received(sender_public_key, certificates, request, 
 # BSV Middleware Settings
 BSV_MIDDLEWARE = {
     'WALLET': TestWallet(),
-    'ALLOW_UNAUTHENTICATED': True,
+    'ALLOW_UNAUTHENTICATED': False,
     'CALCULATE_REQUEST_PRICE': calculate_test_request_price,
     'CERTIFICATE_REQUESTS': {
         'certifiers': ['033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8'],

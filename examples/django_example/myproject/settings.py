@@ -216,7 +216,7 @@ BSV_MIDDLEWARE = {
     'WALLET': bsv_wallet,
     
     # Optional: Allow unauthenticated requests (useful for development)
-    'ALLOW_UNAUTHENTICATED': True,  # Set to False in production
+    'ALLOW_UNAUTHENTICATED': False,  # Set to False in production
     
     # Optional: Price calculation function
     'CALCULATE_REQUEST_PRICE': calculate_request_price,
