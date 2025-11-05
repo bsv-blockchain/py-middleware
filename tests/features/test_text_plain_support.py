@@ -180,7 +180,7 @@ Line 3 with unicode: café"""
                 self.assertEqual(result['data'], text_content)
                 self.assertEqual(result['encoding'], 'utf-8')
 
-    @patch('bsv_middleware.django.utils.logger')
+    @patch('examples.django_example.django_adapter.utils.logger')
     def test_logging_for_text_plain(self, mock_logger):
         """Test that appropriate logging occurs"""
         request = self._create_text_request(self.test_text_utf8)

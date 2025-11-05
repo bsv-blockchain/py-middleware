@@ -157,12 +157,23 @@ class BSVAuthMiddleware(MiddlewareMixin):
         print(f"[AUTH MIDDLEWARE] Processing request: {request.path}")
         """
         Main middleware entry point.
-        
+
         Equivalent to Express: return (req, res, next) => { ... }
         """
         try:
             logger.debug(f"BSV Auth Middleware processing request: {request.path}")
-            
+
+            # Handle OPTIONS requests (CORS preflight) - bypass authentication
+            if request.method == 'OPTIONS':
+                logger.debug("OPTIONS request detected, returning 204 No Content")
+                response = HttpResponse()
+                response.status_code = 204
+                # Add common CORS headers
+                response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-BSV-*'
+                response['Access-Control-Max-Age'] = '86400'  # 24 hours
+                return response
+
             # Create session manager for this request
             session_manager = self._get_session_manager(request)
             
@@ -195,10 +206,21 @@ class BSVAuthMiddleware(MiddlewareMixin):
     def process_request(self, request: HttpRequest) -> Optional[HttpResponse]:
         """
         Django middleware process_request hook.
-        
+
         This is called before the view is executed.
         """
         try:
+            # Handle OPTIONS requests (CORS preflight) - bypass authentication
+            if request.method == 'OPTIONS':
+                logger.debug("OPTIONS request detected in process_request, returning 204 No Content")
+                response = HttpResponse()
+                response.status_code = 204
+                # Add common CORS headers
+                response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-BSV-*'
+                response['Access-Control-Max-Age'] = '86400'  # 24 hours
+                return response
+
             # Create session manager for this request
             session_manager = self._get_session_manager(request)
             

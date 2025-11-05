@@ -55,7 +55,7 @@ class TestMiddlewareAuthentication:
         
         print()
         print("=" * 70)
-        print("🧪 Middleware Authentication Integration Tests")
+        print("Middleware Authentication Integration Tests")
         print("=" * 70)
         print("Style: TypeScript/Go compatible")
         print("Focus: Middleware integration (NOT py-sdk)")
