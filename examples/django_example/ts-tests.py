@@ -391,9 +391,9 @@ def django_server(live_server):
     Use pytest-django's live_server fixture for better Django integration.
     Similar to the beforeAll/afterAll in the TypeScript tests.
     """
-    print(f'\n✅ Test Django server is running on {live_server.url}')
+    print(f'\n[OK] Test Django server is running on {live_server.url}')
     yield live_server.url
-    print('\n✅ Test Django server stopped')
+    print('\n[OK] Test Django server stopped')
 
 
 @pytest.fixture
@@ -435,7 +435,7 @@ class TestIntegration:
         assert result is not None
         assert result.status_code == 200
         json_response = result.json()
-        print(f"✅ Test 1 Response: {json_response}")
+        print(f"[OK] Test 1 Response: {json_response}")
         assert json_response is not None
         assert 'authenticated' in json_response
 
@@ -454,7 +454,7 @@ class TestIntegration:
         # Test with non-existent endpoint
         result = auth_fetch.fetch(None, f'{django_server}/non-existent/', config)
         assert result.status_code == 404
-        print(f"✅ Test 1b - Got expected 404")
+        print(f"[OK] Test 1b - Got expected 404")
 
     def test_02_post_with_url_encoded(self, django_server, auth_fetch):
         """Test 2: POST request with URL-encoded data"""
@@ -470,7 +470,7 @@ class TestIntegration:
         result = auth_fetch.fetch(None, f'{django_server}/auth-test/', config)
         assert result.status_code == 200
         assert result.text is not None
-        print(f"✅ Test 2 - URL encoded data sent successfully")
+        print(f"[OK] Test 2 - URL encoded data sent successfully")
 
     def test_03_post_with_plain_text(self, django_server, auth_fetch):
         """Test 3: POST request with plain text"""
@@ -697,13 +697,23 @@ class TestCertificates:
 class TestDjangoSpecific:
     """Tests specific to the Django middleware implementation"""
 
+    def test_health_endpoint_simple_http(self, django_server):
+        """Test the health check endpoint with simple HTTP (no BSV auth) - verify endpoint works"""
+        # Test with simple HTTP request first to verify endpoint functionality
+        response = requests.get(f'{django_server}/health/')
+        assert response.status_code == 200
+        data = response.json()
+        assert data['status'] == 'healthy'
+        assert 'service' in data
+        print(f"[OK] Health check (simple HTTP) response: {data}")
+
     def test_health_endpoint(self, django_server, auth_fetch):
         """Test the health check endpoint with BSV authentication"""
         result = auth_fetch.fetch(None, f'{django_server}/health/')
         assert result.status_code == 200
         data = result.json()
         assert data['status'] == 'healthy'
-        print(f"✅ Health check response: {data}")
+        print(f"[OK] Health check response: {data}")
 
     def test_home_endpoint(self, django_server, auth_fetch):
         """Test the home endpoint with BSV authentication"""
@@ -711,7 +721,7 @@ class TestDjangoSpecific:
         assert result.status_code == 200
         data = result.json()
         assert 'endpoints' in data
-        print(f"✅ Home endpoint response: {data}")
+        print(f"[OK] Home endpoint response: {data}")
 
     def test_public_endpoint(self, django_server, auth_fetch):
         """Test the public endpoint with BSV authentication"""
@@ -719,7 +729,7 @@ class TestDjangoSpecific:
         assert result.status_code == 200
         data = result.json()
         assert data['access'] == 'free'
-        print(f"✅ Public endpoint response: {data}")
+        print(f"[OK] Public endpoint response: {data}")
 
     def test_protected_endpoint_with_auth(self, django_server, auth_fetch):
         """Test protected endpoint WITH BSV authentication"""
@@ -727,7 +737,7 @@ class TestDjangoSpecific:
         # With proper auth, should return 200
         assert result.status_code == 200
         data = result.json()
-        print(f"✅ Protected endpoint (with auth) response: {data}")
+        print(f"[OK] Protected endpoint (with auth) response: {data}")
         assert 'identity_key' in data
 
     def test_premium_endpoint_without_payment(self, django_server, auth_fetch):
@@ -736,7 +746,7 @@ class TestDjangoSpecific:
         # Should return 402 (payment required) even with auth
         assert result.status_code in [200, 402]
         data = result.json()
-        print(f"✅ Premium endpoint (no payment) response: {data}")
+        print(f"[OK] Premium endpoint (no payment) response: {data}")
 
     def test_auth_test_endpoint_get(self, django_server, auth_fetch):
         """Test the auth-test endpoint with GET and BSV authentication"""
@@ -746,7 +756,7 @@ class TestDjangoSpecific:
         assert 'method' in data
         assert data['method'] == 'GET'
         assert 'authenticated' in data
-        print(f"✅ Auth-test GET response: {data}")
+        print(f"[OK] Auth-test GET response: {data}")
 
     def test_auth_test_endpoint_post(self, django_server, auth_fetch):
         """Test the auth-test endpoint with POST and BSV authentication"""
@@ -760,7 +770,7 @@ class TestDjangoSpecific:
         data = result.json()
         assert 'method' in data
         assert data['method'] == 'POST'
-        print(f"✅ Auth-test POST response: {data}")
+        print(f"[OK] Auth-test POST response: {data}")
 
 
 if __name__ == '__main__':
