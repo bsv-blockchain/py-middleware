@@ -61,6 +61,11 @@ class DjangoTransport(Transport):
             allow_unauthenticated: Whether to allow unauthenticated requests
             log_level: Logging level
         """
+        if not PY_SDK_AVAILABLE:
+            raise BSVServerMisconfiguredException(
+                message="py-sdk is required but not available",
+                details={"module": "django_adapter.transport", "hint": "Install py-sdk and ensure it is importable"}
+            )
         self.py_sdk_bridge = py_sdk_bridge
         self.allow_unauthenticated = allow_unauthenticated
         self.log_level = log_level

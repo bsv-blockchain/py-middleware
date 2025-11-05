@@ -9,6 +9,7 @@ Phase 2.1 Day 2: 実際の統合実装
 
 from typing import Any, Dict, TYPE_CHECKING
 import logging
+from .exceptions import BSVAuthException
 
 # Import WalletInterface with proper type checking support
 PY_SDK_AVAILABLE = False  # Initialize before conditional import
@@ -489,9 +490,11 @@ def create_wallet_adapter(simple_wallet: Any) -> Any:
         py-sdk WalletInterface 互換のアダプター
     """
     if not PY_SDK_AVAILABLE:
-        logger.warning("py-sdk not available, returning wrapper without WalletInterface inheritance")
-        # py-sdk が無い場合は簡易ラッパーを返す
-        return simple_wallet  # type: ignore
+        logger.error("py-sdk is required but not available; refusing to bypass with a simple wrapper")
+        raise BSVAuthException(
+            message="py-sdk is required for wallet adapter but not available",
+            details={"module": "wallet_adapter", "hint": "Install py-sdk and ensure it is importable"}
+        )
     
     # Check if wallet is already a full WalletImpl (has create_action, internalize_action, etc.)
     if hasattr(simple_wallet, 'create_action') and hasattr(simple_wallet, 'internalize_action'):
