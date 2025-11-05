@@ -6,8 +6,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # BSV Authentication endpoints (supporting both paths for compatibility)
-    path('.well-known/auth', views.bsv_auth_wellknown, name='bsv_auth_compat'),
+    # BSV Authentication endpoint
+    path('.well-known/auth', views.bsv_auth_wellknown, name='bsv_auth'),
     
     # Simple test endpoint
     path('test/', views.simple_test, name='simple_test'),

@@ -170,7 +170,13 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 response.status_code = 204
                 # Add common CORS headers
                 response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-                response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-BSV-*'
+                # Explicitly list all BSV headers (auth + payment)
+                response['Access-Control-Allow-Headers'] = (
+                    'Content-Type, Authorization, '
+                    'X-Bsv-Auth-Version, X-Bsv-Auth-Message-Type, X-Bsv-Identity, '
+                    'X-Bsv-Payment, X-Bsv-Payment-Version, X-Bsv-Payment-Satoshis-Required, '
+                    'X-Bsv-Payment-Satoshis-Paid, X-Bsv-Payment-Derivation-Prefix'
+                )
                 response['Access-Control-Max-Age'] = '86400'  # 24 hours
                 return response
 
@@ -217,7 +223,13 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 response.status_code = 204
                 # Add common CORS headers
                 response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-                response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-BSV-*'
+                # Explicitly list all BSV headers (auth + payment)
+                response['Access-Control-Allow-Headers'] = (
+                    'Content-Type, Authorization, '
+                    'X-Bsv-Auth-Version, X-Bsv-Auth-Message-Type, X-Bsv-Identity, '
+                    'X-Bsv-Payment, X-Bsv-Payment-Version, X-Bsv-Payment-Satoshis-Required, '
+                    'X-Bsv-Payment-Satoshis-Paid, X-Bsv-Payment-Derivation-Prefix'
+                )
                 response['Access-Control-Max-Age'] = '86400'  # 24 hours
                 return response
 
