@@ -131,7 +131,7 @@ LOGGING = {
 # Create BSV wallet for operations
 try:
     # Try to use actual py-sdk components
-    print("🔍 Attempting to create py-sdk wallet...")
+    print("[INFO] Attempting to create py-sdk wallet...")
     
     # Use WalletAdapter to make any wallet compatible
     from bsv_middleware.wallet_adapter import create_wallet_adapter
@@ -157,10 +157,10 @@ try:
     # Create adapted wallet that works with py-sdk interfaces
     base_wallet = ExampleWallet()
     bsv_wallet = create_wallet_adapter(base_wallet)
-    print(f"✅ Created adapted wallet with public key: {base_wallet.get_public_key()}")
+    print(f"[OK] Created adapted wallet with public key: {base_wallet.get_public_key()}")
     
 except Exception as e:
-    print(f"⚠️  Using fallback mock wallet: {e}")
+    print(f"[WARN] Using fallback mock wallet: {e}")
     
     # Fallback mock wallet
     class MockWallet:
@@ -249,10 +249,10 @@ try:
     
     # Add payment middleware to MIDDLEWARE list
     MIDDLEWARE.append('myproject.settings.PaymentMiddleware')
-    print("✅ Payment middleware configured successfully")
+    print("[OK] Payment middleware configured successfully")
     
 except Exception as e:
-    print(f"⚠️  Payment middleware configuration failed: {e}")
+    print(f"[WARN] Payment middleware configuration failed: {e}")
     print("   Authentication-only mode will be used")
 
 # ===== End BSV Middleware Configuration =====

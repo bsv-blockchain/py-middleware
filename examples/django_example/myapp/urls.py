@@ -6,11 +6,16 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # BSV Authentication endpoint
+    # BSV Authentication endpoints (supporting both paths for compatibility)
     path('.well-known/bsv/auth', views.bsv_auth_wellknown, name='bsv_auth'),
+<<<<<<< HEAD
     # Compatibility alias for clients expecting /.well-known/auth
     path('.well-known/auth', views.bsv_auth_wellknown, name='bsv_auth_compat'),
     
+=======
+    path('.well-known/auth', views.bsv_auth_wellknown, name='bsv_auth_compat'),  # py-sdk client uses this path
+
+>>>>>>> f282841 (Moving to wrapping up)
     # Simple test endpoint
     path('test/', views.simple_test, name='simple_test'),
     

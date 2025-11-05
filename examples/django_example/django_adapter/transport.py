@@ -489,9 +489,10 @@ class DjangoTransport(Transport):
         py-sdk compliant: Convert HTTP to AuthMessage, delegate to Peer, convert back
         """
         try:
-            # Check if this is a .well-known/bsv/auth POST request (initialRequest)
-            if request.path == '/.well-known/bsv/auth' and request.method == 'POST':
-                self._log('debug', 'Handling .well-known/bsv/auth POST request')
+            # Check if this is a .well-known auth POST request (initialRequest)
+            # Support both /.well-known/auth (py-sdk) and /.well-known/bsv/auth
+            if request.path in ['/.well-known/bsv/auth', '/.well-known/auth'] and request.method == 'POST':
+                self._log('debug', f'Handling {request.path} POST request')
                 return self._handle_well_known_auth(request, response, None)
             
             # Step 1: Extract BSV headers and convert to AuthMessage
