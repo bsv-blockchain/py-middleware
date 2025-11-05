@@ -14,7 +14,7 @@ import json
 
 from examples.django_example.django_adapter.utils import (
     is_text_plain_request,
-    get_text_content, 
+    get_text_content,
     get_content_by_type
 )
 

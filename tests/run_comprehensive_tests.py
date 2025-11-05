@@ -148,7 +148,7 @@ class SimpleAPITester:
         print("=" * 30)
         
         try:
-            from examples.django_example.django_adapter.utils import (
+            from .django_example.django_adapter.utils import (
                 get_identity_key, is_authenticated_request, 
                 format_satoshis, create_bsv_response
             )
