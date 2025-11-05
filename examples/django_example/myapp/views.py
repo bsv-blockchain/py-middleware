@@ -209,7 +209,7 @@ def decorator_payment_example(request):
 @csrf_exempt
 def bsv_auth_wellknown(request):
     """
-    /.well-known/bsv/auth エンドポイント
+    /.well-known/auth エンドポイント
     
     BSV認証プロトコルのエンドポイント。
     AuthMiddlewareが処理するため、このビューは通常到達しません。

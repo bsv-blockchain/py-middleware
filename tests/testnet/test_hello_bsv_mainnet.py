@@ -382,7 +382,7 @@ def test_mainnet_auth_payment():
         }
         
         initial_response = requests.post(
-            "http://localhost:8000/.well-known/bsv/auth",
+            "http://localhost:8000/.well-known/auth",
             json=initial_message_data,
             headers={"Content-Type": "application/json"}
         )

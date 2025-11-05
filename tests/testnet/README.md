@@ -58,7 +58,7 @@ Testnet 環境での認証フロー統合テスト
 - ✅ Testnet ウォレット初期化
 - ✅ DjangoTransport 作成
 - ✅ Peer 初期化
-- ✅ `/.well-known/bsv/auth` エンドポイント
+- ✅ `/.well-known/auth` エンドポイント
 - ✅ Testnet 残高確認
 - ✅ WhatsOnChain API 接続
 
