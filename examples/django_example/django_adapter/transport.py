@@ -490,8 +490,8 @@ class DjangoTransport(Transport):
         """
         try:
             # Check if this is a .well-known auth POST request (initialRequest)
-            # Support both /.well-known/auth (py-sdk) and /.well-known/bsv/auth
-            if request.path in ['/.well-known/bsv/auth', '/.well-known/auth'] and request.method == 'POST':
+            # Support both /.well-known/auth (py-sdk) and /.well-known/auth
+            if request.path in ['/.well-known/auth', '/.well-known/auth'] and request.method == 'POST':
                 self._log('debug', f'Handling {request.path} POST request')
                 return self._handle_well_known_auth(request, response, None)
             

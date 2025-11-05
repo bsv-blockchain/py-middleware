@@ -53,7 +53,7 @@ This is a complete Django project demonstrating the use of BSV authentication an
 | `/public/`          | Free           | 0             | Public endpoint (shows auth info if available) |
 | `/protected/`       | Auth Required  | 500 satoshis  | Protected endpoint requiring authentication    |
 | `/premium/`         | Auth + Payment | 1000 satoshis | Premium endpoint requiring payment             |
-| `/.well-known/bsv/auth` | BSV Protocol   | -             | BSV authentication endpoint                    |
+| `/.well-known/auth` | BSV Protocol   | -             | BSV authentication endpoint                    |
 
 ## Configuration
 
@@ -124,7 +124,7 @@ To test with actual BSV authentication and payments, you'll need:
 ### Example Client Request (with authentication):
 
 ```bash
-curl -X POST http://localhost:8000/.well-known/bsv/auth \
+curl -X POST http://localhost:8000/.well-known/auth \
   -H "Content-Type: application/json" \
   -H "x-bsv-auth-version: 1.0" \
   -H "x-bsv-auth-message-type: initial" \
@@ -265,7 +265,7 @@ curl -i http://localhost:8000/premium/
 - BSV auth well-known endpoint (use a BRC-103/104-capable client):
 
 ```bash
-curl -X POST http://localhost:8000/.well-known/bsv/auth \
+curl -X POST http://localhost:8000/.well-known/auth \
   -H "Content-Type: application/json" \
   -H "x-bsv-auth-version: 1.0" \
   -H "x-bsv-auth-message-type: initial" \

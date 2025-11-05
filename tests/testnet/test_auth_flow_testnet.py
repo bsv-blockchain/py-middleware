@@ -171,9 +171,9 @@ class TestTestnetAuthFlow:
     
     @pytest.mark.django_db
     def test_04_auth_endpoint_wellknown(self):
-        """Test 4: /.well-known/bsv/auth エンドポイント (testnet)"""
+        """Test 4: /.well-known/auth エンドポイント (testnet)"""
         print()
-        print("Test 4: /.well-known/bsv/auth エンドポイント")
+        print("Test 4: /.well-known/auth エンドポイント")
         
         # Middleware 作成
         def dummy_view(request):
@@ -188,8 +188,8 @@ class TestTestnetAuthFlow:
         
         middleware = BSVAuthMiddleware(dummy_view)
         
-        # /.well-known/bsv/auth リクエスト
-        request = self.factory.get('/.well-known/bsv/auth')
+        # /.well-known/auth リクエスト
+        request = self.factory.get('/.well-known/auth')
         
         # Django session を追加 (middleware が session を必要とする)
         from django.contrib.sessions.middleware import SessionMiddleware
