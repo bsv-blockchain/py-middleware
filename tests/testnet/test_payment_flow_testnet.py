@@ -28,7 +28,7 @@ except ImportError:
     pytest.skip("py-sdk not installed", allow_module_level=True)
 
 # Middleware imports
-from bsv_middleware.django.payment_middleware import BSVPaymentMiddleware
+from examples.django_example.django_adapter.payment_middleware import BSVPaymentMiddleware
 
 
 def load_testnet_wallet():

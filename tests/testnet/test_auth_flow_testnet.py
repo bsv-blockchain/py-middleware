@@ -32,8 +32,8 @@ except ImportError:
     pytest.skip("py-sdk not installed", allow_module_level=True)
 
 # Middleware imports
-from bsv_middleware.django.auth_middleware import BSVAuthMiddleware
-from bsv_middleware.django.transport import DjangoTransport
+from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
+from examples.django_example.django_adapter.transport import DjangoTransport
 from bsv_middleware.py_sdk_bridge import PySdkBridge
 
 
@@ -171,9 +171,9 @@ class TestTestnetAuthFlow:
     
     @pytest.mark.django_db
     def test_04_auth_endpoint_wellknown(self):
-        """Test 4: /.well-known/bsv/auth エンドポイント (testnet)"""
+        """Test 4: /.well-known/auth エンドポイント (testnet)"""
         print()
-        print("Test 4: /.well-known/bsv/auth エンドポイント")
+        print("Test 4: /.well-known/auth エンドポイント")
         
         # Middleware 作成
         def dummy_view(request):
@@ -183,13 +183,13 @@ class TestTestnetAuthFlow:
         # 設定 (testnet テストでは ALLOW_UNAUTHENTICATED=True)
         settings.BSV_MIDDLEWARE = {
             'WALLET': self.wallet,
-            'ALLOW_UNAUTHENTICATED': True,  # testnet では認証なしを許可
+            'ALLOW_UNAUTHENTICATED': False,  # testnet では認証なしを許可
         }
         
         middleware = BSVAuthMiddleware(dummy_view)
         
-        # /.well-known/bsv/auth リクエスト
-        request = self.factory.get('/.well-known/bsv/auth')
+        # /.well-known/auth リクエスト
+        request = self.factory.get('/.well-known/auth')
         
         # Django session を追加 (middleware が session を必要とする)
         from django.contrib.sessions.middleware import SessionMiddleware

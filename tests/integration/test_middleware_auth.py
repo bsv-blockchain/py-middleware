@@ -17,7 +17,7 @@ from bsv.wallet.wallet_impl import WalletImpl
 from bsv.keys import PrivateKey
 
 # Middleware imports
-from bsv_middleware.django.auth_middleware import BSVAuthMiddleware
+from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
 
 
 class TestMiddlewareAuthentication:
@@ -55,7 +55,7 @@ class TestMiddlewareAuthentication:
         
         print()
         print("=" * 70)
-        print("🧪 Middleware Authentication Integration Tests")
+        print("Middleware Authentication Integration Tests")
         print("=" * 70)
         print("Style: TypeScript/Go compatible")
         print("Focus: Middleware integration (NOT py-sdk)")

@@ -63,7 +63,7 @@ class MockTestWallet:
 # BSV Middleware test configuration
 BSV_MIDDLEWARE = {
     'WALLET': MockTestWallet(),
-    'ALLOW_UNAUTHENTICATED': True,
+    'ALLOW_UNAUTHENTICATED': False,
     'REQUIRE_AUTH': False,  # Allow payment middleware without auth middleware
     'CALCULATE_REQUEST_PRICE': lambda request: 500 if '/premium/' in request.path else 300 if '/decorator-payment/' in request.path else 0,
     'LOG_LEVEL': 'debug',

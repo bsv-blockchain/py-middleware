@@ -51,13 +51,13 @@ from bsv.keys import PrivateKey
 from bsv.wallet.wallet_impl import WalletImpl
 from bsv.constants import Network
 
-# Mainnetウォレット設定の読み込み
-mainnet_wallet_config_path = Path(__file__).parent.parent.parent / "examples" / "testnet_setup" / "mainnet_wallet_config.json"
+# Mainnetウォレット設定の読み込み（サーバー用）
+mainnet_wallet_config_path = Path(__file__).parent.parent.parent / "examples" / "testnet_setup" / "mainnet_server_wallet_config.json"
 
 if not mainnet_wallet_config_path.exists():
     raise FileNotFoundError(
-        f"Mainnet wallet config not found: {mainnet_wallet_config_path}\n"
-        f"Please create a mainnet wallet first:\n"
+        f"Mainnet server wallet config not found: {mainnet_wallet_config_path}\n"
+        f"Please create a mainnet server wallet first:\n"
         f"  python examples/testnet_setup/create_mainnet_wallet.py"
     )
 
@@ -107,7 +107,7 @@ def calculate_request_price_mainnet(request):
 # BSV Middleware設定
 BSV_MIDDLEWARE = {
     'WALLET': mainnet_wallet,
-    'ALLOW_UNAUTHENTICATED': False,  # Mainnetでは認証を推奨
+    'ALLOW_UNAUTHENTICATED': False,  # Require authentication for testing
     'REQUIRE_AUTH': True,             # 認証必須
     'CALCULATE_REQUEST_PRICE': calculate_request_price_mainnet,
     'LOG_LEVEL': 'info',  # Mainnetではデバッグログを抑制
@@ -122,9 +122,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # BSV Middleware
-    'bsv_middleware.django.auth_middleware.BSVAuthMiddleware',      # 認証ミドルウェア
-    'bsv_middleware.django.payment_middleware.BSVPaymentMiddleware', # 支払いミドルウェア
+    # BSV Middleware (リファクタリング後のパス)
+    'django_adapter.auth_middleware.BSVAuthMiddleware',      # 認証ミドルウェア
+    'django_adapter.payment_middleware.BSVPaymentMiddleware', # 支払いミドルウェア
 ]
 
 # セキュリティ設定 (本番環境向け)
@@ -155,6 +155,14 @@ print("  - 実際のBSVを使用します")
 print("  - トランザクション手数料が発生します")
 print("  - 適切なセキュリティ対策を実施してください")
 print("=" * 80)
+
+
+
+
+
+
+
+
 
 
 
