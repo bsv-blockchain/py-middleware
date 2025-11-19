@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any, Callable
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
 
-from ..types import (
+from bsv_middleware.types import (
     WalletInterface,
     LogLevel,
     CertificatesReceivedCallback,
@@ -120,7 +120,7 @@ BSV_MIDDLEWARE = {
     'WALLET': bsv_wallet,
     
     # Optional: Allow unauthenticated requests (useful for development)
-    'ALLOW_UNAUTHENTICATED': True,  # Set to False in production
+    'ALLOW_UNAUTHENTICATED': False,  # Set to False in production
     
     # Optional: Price calculation function
     'CALCULATE_REQUEST_PRICE': calculate_request_price,
@@ -331,7 +331,7 @@ EXAMPLE_SETTINGS = {
     
     'development': {
         'WALLET': 'YourWalletInstance',  # Replace with actual wallet
-        'ALLOW_UNAUTHENTICATED': True,
+        'ALLOW_UNAUTHENTICATED': False,
         'CALCULATE_REQUEST_PRICE': lambda request: 0 if request.path.startswith('/free/') else 100,
         'LOG_LEVEL': 'debug',
     },

@@ -9,6 +9,7 @@ Phase 2.1 Day 2: 実際の統合実装
 
 from typing import Any, Dict, TYPE_CHECKING
 import logging
+from .exceptions import BSVAuthException
 
 # Import WalletInterface with proper type checking support
 PY_SDK_AVAILABLE = False  # Initialize before conditional import
@@ -360,23 +361,37 @@ class WalletImplAdapter:
         return result
     
     def create_signature(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """Convert WalletImpl Dict response to object with signature attribute."""
-        # Fix: Peer uses type:3 which is invalid. Map it to type:1 (OTHER)
-        # CounterpartyType: SELF=0, OTHER=1, ANYONE=2
-        # Peer incorrectly uses type:3 for counterparty with explicit public key
-        try:
-            enc_args = args.get('encryption_args', {})
-            if enc_args:
-                cp = enc_args.get('counterparty', {})
-                if isinstance(cp, dict) and cp.get('type') == 3:
-                    logger.debug(f"Fixing invalid counterparty type 3 -> 1 (OTHER)")
-                    cp['type'] = 1  # CounterpartyType.OTHER
-                elif isinstance(cp, dict) and 'type' not in cp:
-                    cp['type'] = 1
-                elif not isinstance(cp, dict):
-                    enc_args['counterparty'] = {'type': 1, 'counterparty': cp}
-        except Exception as e:
-            logger.debug(f"create_signature type fixing failed: {e}")
+        """
+        Convert WalletImpl Dict response to object with signature attribute.
+        Transforms nested encryption_args structure to BRC-100 compliant flat structure.
+        """
+        # BRC-100 compliant: Convert nested encryption_args to flat structure
+        enc_args = args.get('encryption_args', {})
+        if enc_args:
+            # Flatten the structure for BRC-100 compliance (snake_case)
+            flat_args = {
+                'protocol_id': enc_args.get('protocol_id'),
+                'key_id': enc_args.get('key_id'),
+                'counterparty': enc_args.get('counterparty'),
+                'data': args.get('data'),
+                'hash_to_directly_sign': args.get('hash_to_directly_sign'),
+            }
+            
+            # Normalize counterparty type to py-sdk/go definitions
+            # CounterpartyType: ANYONE=1, SELF=2, OTHER=3
+            try:
+                cp = flat_args.get('counterparty')
+                if isinstance(cp, dict):
+                    # If no type and a counterparty pubkey is present, assume OTHER=3
+                    if 'type' not in cp and ('counterparty' in cp and cp['counterparty']):
+                        cp['type'] = 3
+                else:
+                    # If provided as hex/pubkey, wrap as OTHER=3
+                    flat_args['counterparty'] = {'type': 3, 'counterparty': cp}
+            except Exception as e:
+                logger.debug(f"create_signature type fixing failed: {e}")
+            
+            args = flat_args
         
         result = self.wallet_impl.create_signature(ctx, args, originator)
         
@@ -397,24 +412,43 @@ class WalletImplAdapter:
     
     def verify_signature(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """
-        Normalize verify_signature arguments to what WalletImpl expects (TS parity):
-        - encryption_args.counterparty: ensure dict with type and PublicKey object
-        - protocol_id: ensure dict with protocol string
-        - data/signature: ensure bytes
+        Normalize verify_signature arguments to BRC-100 compliant flat structure.
+        Transforms nested encryption_args to flat snake_case structure.
         """
         print(f"[ADAPTER] verify_signature called! originator={originator}")
         
-        # Debug: log all arguments for comparison with TS
+        # BRC-100 compliant: Convert nested encryption_args to flat structure
+        enc_args = args.get('encryption_args', {})
+        if enc_args:
+            # Flatten the structure for BRC-100 compliance (snake_case)
+            flat_args = {
+                'protocol_id': enc_args.get('protocol_id'),
+                'key_id': enc_args.get('key_id'),
+                'counterparty': enc_args.get('counterparty'),
+                'for_self': enc_args.get('for_self', False),
+                'data': args.get('data'),
+                'hash_to_directly_verify': args.get('hash_to_directly_verify'),
+                'signature': args.get('signature'),
+            }
+            # Normalize counterparty type to py-sdk/go definitions (ANYONE=1, SELF=2, OTHER=3)
+            try:
+                cp = flat_args.get('counterparty')
+                if isinstance(cp, dict):
+                    if 'type' not in cp and ('counterparty' in cp and cp['counterparty']):
+                        cp['type'] = 3
+                else:
+                    flat_args['counterparty'] = {'type': 3, 'counterparty': cp}
+            except Exception as e:
+                logger.debug(f"verify_signature type fixing failed: {e}")
+            args = flat_args
+        
+        # Debug: log flattened arguments
         try:
-            enc_args_debug = args.get('encryption_args', {})
-            proto_debug = enc_args_debug.get('protocol_id', {})
-            print(f"[ADAPTER DEBUG] protocol: {proto_debug.get('protocol', 'NONE')}")
-            print(f"[ADAPTER DEBUG] key_id: {enc_args_debug.get('key_id', 'NONE')[:50]}...")
-            cp_debug = enc_args_debug.get('counterparty', {})
-            print(f"[ADAPTER DEBUG] counterparty.type: {cp_debug.get('type', 'NONE')}")
-            cp_obj = cp_debug.get('counterparty')
-            if hasattr(cp_obj, 'hex'):
-                print(f"[ADAPTER DEBUG] counterparty.hex: {cp_obj.hex()[:40]}...")
+            proto_debug = args.get('protocol_id', {})
+            print(f"[ADAPTER DEBUG] protocol: {proto_debug.get('protocol', proto_debug) if isinstance(proto_debug, dict) else proto_debug}")
+            print(f"[ADAPTER DEBUG] key_id: {str(args.get('key_id', 'NONE'))[:50]}...")
+            cp_debug = args.get('counterparty', {})
+            print(f"[ADAPTER DEBUG] counterparty.type: {cp_debug.get('type', 'NONE') if isinstance(cp_debug, dict) else 'NONE'}")
         except Exception as e:
             print(f"[ADAPTER DEBUG] Failed to log args: {e}")
         
@@ -456,9 +490,11 @@ def create_wallet_adapter(simple_wallet: Any) -> Any:
         py-sdk WalletInterface 互換のアダプター
     """
     if not PY_SDK_AVAILABLE:
-        logger.warning("py-sdk not available, returning wrapper without WalletInterface inheritance")
-        # py-sdk が無い場合は簡易ラッパーを返す
-        return simple_wallet  # type: ignore
+        logger.error("py-sdk is required but not available; refusing to bypass with a simple wrapper")
+        raise BSVAuthException(
+            message="py-sdk is required for wallet adapter but not available",
+            details={"module": "wallet_adapter", "hint": "Install py-sdk and ensure it is importable"}
+        )
     
     # Check if wallet is already a full WalletImpl (has create_action, internalize_action, etc.)
     if hasattr(simple_wallet, 'create_action') and hasattr(simple_wallet, 'internalize_action'):

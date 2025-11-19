@@ -133,7 +133,7 @@ BSV_MIDDLEWARE = {
     'WALLET': testnet_wallet,
     
     # Testnet環境では認証を緩く設定
-    'ALLOW_UNAUTHENTICATED': True,  # テスト用に認証なしも許可
+    'ALLOW_UNAUTHENTICATED': False,  # テスト用に認証なしも許可
     'REQUIRE_AUTH': False,  # 支払いのみでもOK（テスト用）
     
     # Price calculation

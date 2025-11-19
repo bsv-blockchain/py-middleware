@@ -81,7 +81,7 @@ class TestAuthPaymentIntegration(LiveServerTestCase):
     def test_full_flow(self):
         # 1. 認証フロー
         auth_response = requests.get(
-            f"{self.server_url}/.well-known/bsv/auth",
+            f"{self.server_url}/.well-known/auth",
             headers={"x-bsv-identity": client_identity}
         )
 
@@ -204,7 +204,7 @@ response = await client_peer.fetch_with_payment(
 # test_auth_only_testnet.py
 
 def test_auth_flow():
-    # 1. /.well-known/bsv/authにアクセス
+    # 1. /.well-known/authにアクセス
     auth_endpoint_response = get_auth_config()
 
     # 2. 認証ヘッダーを作成

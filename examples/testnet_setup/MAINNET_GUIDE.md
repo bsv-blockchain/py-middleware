@@ -1,3 +1,324 @@
+# 🌐 BSV Mainnet Payment Experiment Guide (English)
+
+**⚠️ Important Warning**: This guide uses the real BSV Mainnet. Real coins are used and transaction fees will be incurred.
+
+---
+
+## 📋 Prerequisites
+
+- ✅ You have completed verification on Testnet
+- ✅ You understand how the BSV Middleware works
+- ✅ You are ready to test with small amounts
+- ✅ You understand the importance of private key management
+
+---
+
+## 🚀 Step 1: Create a Mainnet Wallet
+
+### 1.1 Run the wallet creation script
+
+```bash
+cd /Users/cdl/development/py-middleware-project/py-middleware
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Create Mainnet wallet
+python examples/testnet_setup/create_mainnet_wallet.py
+```
+
+### 1.2 Files that will be created
+
+```
+examples/testnet_setup/
+└── mainnet_server_wallet_config.json  # ⚠️ サーバー用ウォレット（秘密鍵を含む - 厳重管理）
+```
+
+### 1.3 Important checks
+
+- ✅ Ensure `mainnet_wallet_config.json` is listed in `.gitignore`
+- ✅ Back up the private key (print, encrypted USB, etc.)
+- ✅ Note the address (destination for BSV)
+
+---
+
+## 💰 Step 2: Buy and send a small amount of BSV
+
+### 2.1 How to buy BSV
+
+#### Option A: HandCash (recommended)
+
+```
+URL: https://handcash.io/
+- Buy BSV with the mobile app
+- Low minimum purchase
+- Easy to send
+```
+
+#### Option B: Exchanges
+
+```
+- Buy BSV on Coinbase, Binance, etc.
+- Withdraw to your wallet
+```
+
+### 2.2 Sending procedure
+
+1. Destination address: the `address` field in `mainnet_wallet_config.json`
+2. Recommended amount: 10,000 - 100,000 satoshis (0.0001 - 0.001 BSV)
+3. Send from your exchange/wallet
+
+### 2.3 Confirm the transfer
+
+```bash
+# Check balance on WhatsOnChain
+# https://whatsonchain.com/address/[your-address]
+```
+
+**Check**:
+
+- ✅ Transaction has at least 1 confirmation
+- ✅ Balance is displayed
+
+---
+
+## 🧪 Step 3: Run the payment test
+
+### 3.1 Basic payment test
+
+```bash
+cd /Users/cdl/development/py-middleware-project/py-middleware
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run Mainnet payment test
+python tests/testnet/test_mainnet_payment.py
+```
+
+**Expected behavior**:
+
+1. Balance check
+2. Create a transaction (500 satoshis)
+3. Broadcast
+4. Show TXID
+
+### 3.2 Example output
+
+```
+🌐 BSV Mainnet Payment Test
+==================================================
+⚠️  This test uses the real BSV Mainnet
+   Real coins and transaction fees will be incurred
+
+Run the payment test on Mainnet? (yes/no): yes
+
+📋 Loading wallet...
+✅ Loaded Mainnet wallet
+   Address: 1A2B3C...
+
+💰 Balance check (Mainnet)
+✅ Balance: 50,000 satoshis (0.00050000 BSV)
+
+💸 Creating payment transaction
+   Amount: 500 satoshis
+   Recipient: 1A2B3C... (self-send)
+
+🔨 Building transaction...
+✅ Transaction created successfully
+📡 Broadcasting transaction...
+
+🎉 Mainnet payment test successful!
+✅ Transaction ID: abc123...
+✅ Amount: 500 satoshis
+
+📊 Check transaction:
+   WhatsOnChain: https://whatsonchain.com/tx/abc123...
+```
+
+---
+
+## 🖥️ Step 4: Test on the Django server (Mainnet)
+
+### 4.1 Start the Mainnet server
+
+```bash
+cd /Users/cdl/development/py-middleware-project/py-middleware
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Start Mainnet server
+cd examples/django_example
+python manage.py runserver --settings=mainnet_settings
+```
+
+### 4.2 Endpoint tests
+
+#### Auth + Payment test (`/hello-bsv/`)
+
+```bash
+# Run in another terminal
+cd /Users/cdl/development/py-middleware-project/py-middleware
+
+# Create a client script (Mainnet quick_auth_test.py)
+# ⚠️ Edits for Mainnet will be required
+```
+
+### 4.3 Expected behavior
+
+1. Initial handshake: authentication session established
+2. General Message: authenticated request
+3. Payment processing: real Mainnet transaction
+4. Response: `{ "message": "Hello BSV", "success": true, ... }`
+
+---
+
+## 📊 Step 5: Verify transactions
+
+### 5.1 Check on WhatsOnChain
+
+```
+Mainnet Explorer:
+https://whatsonchain.com/address/[your-address]
+
+Checks:
+✅ Outgoing transactions listed
+✅ Balance changes correctly
+✅ Fees are reasonable
+```
+
+### 5.2 Check server logs
+
+```
+[MAINNET] INFO ... BSVPaymentMiddleware initialized
+[MAINNET] INFO ... Payment processed - TypeScript equivalent
+[MAINNET] INFO ... satoshis_paid: 500
+[MAINNET] INFO ... accepted: True
+```
+
+---
+
+## 💡 Troubleshooting
+
+### Insufficient balance
+
+```
+❌ Error: This wallet has no balance
+```
+
+**How to resolve**:
+
+1. Confirm the transaction on WhatsOnChain has at least 1 confirmation
+2. Send a sufficient amount (minimum 2,000 satoshis)
+3. Confirm at least 1 confirmation
+
+### Broadcast error
+
+```
+❌ Broadcast error: ...
+```
+
+**How to resolve**:
+
+1. Ensure the balance is sufficient
+2. Ensure UTXOs are available
+3. Check network connectivity
+
+### Authentication error
+
+```
+❌ Authentication required
+```
+
+**How to resolve**:
+
+1. Ensure `REQUIRE_AUTH: True` in `mainnet_settings.py`
+2. Ensure the authentication handshake completed successfully
+3. Ensure the session is valid
+
+---
+
+## 🔒 Security checklist
+
+### Before
+
+- [ ] `mainnet_wallet_config.json` is in `.gitignore`
+- [ ] Private key is backed up
+- [ ] Ready to test with small amounts
+- [ ] `DEBUG = False`
+
+### During
+
+- [ ] Private keys do not appear in logs
+- [ ] Transaction amounts are as expected
+- [ ] Recipient address is correct
+
+### After
+
+- [ ] Confirm transactions on WhatsOnChain
+- [ ] Balance changes are correct
+- [ ] No unexpected transactions
+
+---
+
+## 📈 Next steps
+
+### After Phase 3
+
+1. Security validation (3.3)
+   - Run security test suite
+   - Vulnerability scan
+
+2. Performance validation (3.4)
+   - Load testing
+   - Measure response times
+
+3. Production readiness (3.7)
+   - HTTPS configuration
+   - Domain setup
+   - Monitoring and logging
+
+---
+
+## ⚠️ Important notes
+
+### Actual costs
+
+- Transaction fees: typically 1–2 satoshis/byte
+- Per test: about 200–500 satoshis (including fees)
+- 10 tests: about 5,000 satoshis = 0.00005 BSV ≈ $0.0025 (at $50/BSV)
+
+### Recommendations
+
+1. Start small: begin with ≤ 10,000 satoshis
+2. Increase gradually after confirming behavior
+3. Check balances regularly to ensure there are no unexpected transfers
+4. Monitor logs for anomalies
+
+### Emergency procedures
+
+1. Stop server: `pkill -f "manage.py runserver"`
+2. Check balances on WhatsOnChain
+3. Protect private keys: if leakage is suspected, move funds immediately
+
+---
+
+## 📞 Support
+
+If you encounter problems:
+
+1. Check server and client logs
+2. Check transaction status on WhatsOnChain
+3. Reproduce on Testnet if possible
+
+---
+
+🎉 You're ready to begin Mainnet payment experiments!
+
+We strongly recommend starting cautiously with small amounts.
+
+
 # 🌐 BSV Mainnet 支払い実験ガイド
 
 **⚠️ 重要な警告**: このガイドは実際の BSV Mainnet を使用します。実際のコインが使用され、トランザクション手数料が発生します。
@@ -31,7 +352,8 @@ python examples/testnet_setup/create_mainnet_wallet.py
 
 ```
 examples/testnet_setup/
-└── mainnet_wallet_config.json  # ⚠️ 秘密鍵を含む - 厳重管理
+├── mainnet_server_wallet_config.json  # ⚠️ サーバー用ウォレット（秘密鍵を含む - 厳重管理）
+└── mainnet_client_wallet_config.json  # ⚠️ クライアント用ウォレット（テスト時に作成）
 ```
 
 ### **1.3 重要な確認事項**
@@ -161,8 +483,47 @@ python manage.py runserver --settings=mainnet_settings
 # 別のターミナルで実行
 cd /Users/cdl/development/py-middleware-project/py-middleware
 
-# クライアントスクリプト作成 (Mainnet版quick_auth_test.py)
-# ⚠️ Mainnet用に修正が必要
+# Mainnet 認証+決済統合テスト実行
+python3 tests/testnet/test_hello_bsv_mainnet.py
+```
+
+**テストフロー**:
+
+1. **ウォレット確認**
+   - サーバーウォレット: `mainnet_wallet_config.json`
+   - クライアントウォレット: `mainnet_client_wallet_config.json`
+   - ※ クライアントウォレットがない場合、自動作成プロンプトが表示されます
+
+2. **確認プロンプト**
+   ```
+   ⚠️  This test uses REAL BSV on Mainnet!
+   Do you want to proceed? (yes/no): yes
+   ```
+
+3. **残高確認**
+   - WhatsOnChain API で両方のウォレット残高を確認
+   - 最低 1,000 satoshis 必要
+
+4. **認証ハンドシェイク** (BRC-103/104)
+   - Initial Message 送信
+   - サーバーから Initial Response 受信
+
+5. **決済付き認証リクエスト**
+   - 500 satoshis のトランザクション作成・ブロードキャスト
+   - General Message 送信（認証 + X-BSV-Payment ヘッダー）
+
+6. **成功時の出力例**:
+   ```
+   🎉 Mainnet Authentication + Payment Test SUCCESS!
+   ✅ Message: Hello BSV Mainnet!
+   ✅ Authenticated: True
+   ✅ Payment Processed: True
+   ✅ Identity Key: 03abc123...
+   
+   📊 Transaction Details:
+      TXID: a1b2c3d4...
+      Amount: 500 satoshis
+      WhatsOnChain: https://whatsonchain.com/tx/a1b2c3d4...
 ```
 
 ### **4.3 期待される動作**
@@ -319,5 +680,13 @@ https://whatsonchain.com/address/[your-address]
 **🎉 準備完了！Mainnet 支払い実験を開始してください！**
 
 最初は慎重に、少額から始めることを強くお勧めします。
+
+
+
+
+
+
+
+
 
 

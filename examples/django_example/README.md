@@ -76,6 +76,23 @@ BSV_MIDDLEWARE = {
 }
 ```
 
+You can also use the compatibility alias:
+
+```bash
+curl -X POST http://localhost:8000/.well-known/auth \
+  -H "Content-Type: application/json" \
+  -H "x-bsv-auth-version: 1.0" \
+  -H "x-bsv-auth-message-type: initial" \
+  -H "x-bsv-auth-identity-key: 033f..." \
+  -H "x-bsv-auth-nonce: abc123" \
+  -d '{
+    "version": "1.0",
+    "messageType": "initial",
+    "identityKey": "033f...",
+    "nonce": "abc123"
+  }'
+```
+
 ## Middleware Order
 
 The BSV middleware should be placed after Django's built-in middleware:
@@ -166,3 +183,104 @@ This Django implementation is designed to be compatible with the Express middlew
 - Same configuration options
 
 You can use Django and Express BSV applications together in the same ecosystem.
+
+## Mainnet Testing Guide (Django Example)
+
+⚠️ Important: Mainnet uses real BSV and incurs fees. Protect your private keys and follow best practices.
+
+### Prerequisites
+
+- Python virtual environment recommended
+- Local editable installs for this repository and `py-sdk` (handled by `requirements.txt`)
+
+### 1) Environment Setup
+
+```bash
+cd py-middleware/examples/django_example
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+```
+
+`requirements.txt` references the local middleware (two levels up) and `py-sdk` (three levels up) in editable mode.
+
+### 2) Create a Mainnet Wallet (first time only)
+
+Create `examples/testnet_setup/mainnet_wallet_config.json` using one of the scripts below:
+
+- Interactive (safer):
+
+```bash
+python examples/testnet_setup/create_mainnet_wallet.py
+```
+
+- Non-interactive (quick):
+
+```bash
+python examples/testnet_setup/quick_create_mainnet_wallet.py
+```
+
+The Django mainnet settings will fail to load if this file is missing.
+
+### 3) Run Migrations with Mainnet Settings
+
+```bash
+python manage.py migrate --settings=mainnet_settings
+```
+
+### 4) Start the Development Server on Mainnet
+
+Either pass the settings module flag:
+
+```bash
+python manage.py runserver 0.0.0.0:8000 --settings=mainnet_settings
+```
+
+Or set an environment variable:
+
+```bash
+export DJANGO_SETTINGS_MODULE=mainnet_settings
+python manage.py runserver 0.0.0.0:8000
+```
+
+On startup, you'll see logs indicating MAINNET configuration has loaded. Debug is disabled and WhatsOnChain support is enabled.
+
+### 5) Verify Endpoints
+
+- Free endpoints (if `ALLOW_UNAUTHENTICATED=False`, these may return 401; for a quick smoke test, temporarily set `ALLOW_UNAUTHENTICATED=True` in `mainnet_settings.py`):
+
+```bash
+curl http://localhost:8000/health/
+curl http://localhost:8000/public/
+```
+
+- Auth/payment-protected endpoints (will return 401/402 without proper BRC-103/104 auth and payment):
+
+```bash
+curl -i http://localhost:8000/protected/
+curl -i http://localhost:8000/premium/
+```
+
+- BSV auth well-known endpoint (use a BRC-103/104-capable client):
+
+```bash
+curl -X POST http://localhost:8000/.well-known/auth \
+  -H "Content-Type: application/json" \
+  -H "x-bsv-auth-version: 1.0" \
+  -H "x-bsv-auth-message-type: initial" \
+  -H "x-bsv-auth-identity-key: 033f..." \
+  -H "x-bsv-auth-nonce: abc123" \
+  -d '{
+    "version": "1.0",
+    "messageType": "initial",
+    "identityKey": "033f...",
+    "nonce": "abc123"
+  }'
+```
+
+### Notes and Security
+
+- Mainnet settings live in `examples/django_example/mainnet_settings.py` and the Django settings module name is `mainnet_settings`. They load the wallet from `examples/testnet_setup/mainnet_wallet_config.json`, require authentication, and enable the payment middleware.
+- Never commit private keys. The wallet config file should be protected (e.g., file permissions 600).
+- Start with small amounts of BSV for testing.

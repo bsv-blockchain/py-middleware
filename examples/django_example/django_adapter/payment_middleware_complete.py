@@ -10,9 +10,9 @@ import logging
 from typing import Optional, Dict, Any, Callable
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
-from ..types import LogLevel, BSVPayment, PaymentInfo
-from ..exceptions import BSVAuthException, BSVServerMisconfiguredException
-from ..py_sdk_bridge import PySdkBridge
+from bsv_middleware.types import LogLevel, BSVPayment, PaymentInfo
+from bsv_middleware.exceptions import BSVAuthException, BSVServerMisconfiguredException
+from bsv_middleware.py_sdk_bridge import PySdkBridge
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ class BSVPaymentMiddleware:
         """
         try:
             # Express equivalent: generate nonce for payment
-            from ..py_sdk_bridge import create_nonce
+            from bsv_middleware.py_sdk_bridge import create_nonce
             nonce = create_nonce()
             
             # Express equivalent: get derivation prefix
@@ -273,7 +273,7 @@ class BSVPaymentMiddleware:
                 return False
             
             # Express equivalent: verify nonce using py-sdk
-            from ..py_sdk_bridge import verify_nonce
+            from bsv_middleware.py_sdk_bridge import verify_nonce
             return verify_nonce(nonce)
             
         except Exception as e:
