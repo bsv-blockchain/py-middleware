@@ -220,8 +220,8 @@ class PySdkBridge:
         try:
             if PY_SDK_AVAILABLE and self.wallet:
                 # Use py-sdk wallet to internalize action (TypeScript equivalent)
-                print(f"[PY_SDK_BRIDGE] Processing real payment: {payment_data.satoshis} satoshis")
-                print(f"[PY_SDK_BRIDGE] Transaction hex: {payment_data.transaction[:40]}...")
+                logger.debug(f"[PY_SDK_BRIDGE] Processing real payment: {payment_data.satoshis} satoshis")
+                logger.debug(f"[PY_SDK_BRIDGE] Transaction hex: {payment_data.transaction[:40]}...")
                 
                 # TypeScript equivalent: wallet.internalizeAction with paymentRemittance
                 action = {
@@ -249,8 +249,8 @@ class PySdkBridge:
                     hash2 = hashlib.sha256(hash1).digest()
                     actual_txid = hash2[::-1].hex()
                     
-                    print(f"[PY_SDK_BRIDGE] Real internalize result: {result}")
-                    print(f"[PY_SDK_BRIDGE] Calculated TXID: {actual_txid}")
+                    logger.debug(f"[PY_SDK_BRIDGE] Real internalize result: {result}")
+                    logger.debug(f"[PY_SDK_BRIDGE] Calculated TXID: {actual_txid}")
                     
                     return {
                         'accepted': True,  # py-sdk internalize success = accepted
@@ -258,7 +258,7 @@ class PySdkBridge:
                         'transactionId': actual_txid
                     }
                 except Exception as e:
-                    print(f"[PY_SDK_BRIDGE] Real internalize failed: {e}")
+                    logger.error(f"[PY_SDK_BRIDGE] Real internalize failed: {e}")
                     return {
                         'accepted': False,
                         'error': str(e)
@@ -305,60 +305,6 @@ class PySdkBridge:
         """Get the py-sdk Transport instance."""
         return self.transport
 
-    def build_auth_message_from_request(self, request: Any) -> Optional[Dict[str, Any]]:
-        """
-        Build authentication message from Django request.
-        
-        Equivalent to Express: buildAuthMessageFromRequest(req)
-        """
-        try:
-            # Extract BSV auth headers
-            auth_headers = {}
-            for header_name, header_value in request.headers.items():
-                if header_name.lower().startswith('x-bsv-auth-'):
-                    auth_headers[header_name] = header_value
-            
-            if not auth_headers:
-                return None
-            
-            # TODO: Use py-sdk to build proper auth message
-            # This would involve converting headers to proper auth message format
-            return {
-                'headers': auth_headers,
-                'method': request.method,
-                'path': request.path,
-                'identityKey': auth_headers.get('x-bsv-auth-identity-key', 'unknown'),
-                'certificates': []  # TODO: Extract certificates from headers
-            }
-            
-        except Exception as e:
-            logger.error(f"Failed to build auth message: {e}")
-            raise BSVAuthException("Failed to parse authentication message")
-    
-    def process_certificates(
-        self,
-        sender_public_key: str,
-        certificates: List[Any],
-        request: Any,
-        response: Any
-    ) -> None:
-        """
-        Process received certificates.
-        
-        Equivalent to Express: onCertificatesReceived callback
-        """
-        try:
-            # TODO: Use py-sdk certificate processing
-            logger.info(f"Received {len(certificates)} certificates from {sender_public_key}")
-            
-            for cert in certificates:
-                # Process each certificate
-                # This would involve validating and storing certificates
-                logger.debug(f"Processing certificate: {cert}")
-                
-        except Exception as e:
-            logger.error(f"Failed to process certificates: {e}")
-            raise BSVAuthException("Certificate processing failed")
 
 
 class DjangoTransport(BaseTransport):

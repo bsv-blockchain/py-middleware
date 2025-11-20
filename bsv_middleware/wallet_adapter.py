@@ -1,10 +1,8 @@
 """
-MockTestWallet を py-sdk WalletInterface に適合させるアダプター
+Wallet Adapter for py-sdk WalletInterface
 
-このモジュールは、簡単なwallet (MockTestWallet) を py-sdk の複雑な
-WalletInterface に適合させるためのアダプター層を提供します。
-
-Phase 2.1 Day 2: 実際の統合実装
+This module provides an adapter layer that wraps simple wallet implementations
+(such as MockTestWallet) to conform to the complex py-sdk WalletInterface.
 """
 
 from typing import Any, Dict, TYPE_CHECKING
@@ -32,20 +30,20 @@ logger = logging.getLogger(__name__)
 
 class MiddlewareWalletAdapter(WalletInterface):
     """
-    Django middleware 用の WalletInterface アダプター
+    WalletInterface adapter for Django middleware
     
-    簡単なwallet (MockTestWallet) を py-sdk の複雑な
-    WalletInterface に適合させます。
+    Adapts simple wallet implementations (like MockTestWallet) to the
+    complex py-sdk WalletInterface required by BSV middleware.
     
     Args:
-        simple_wallet: MockTestWallet や他の簡単なwallet実装
+        simple_wallet: A simple wallet implementation like MockTestWallet
     """
     
     def __init__(self, simple_wallet: Any) -> None:
         self.simple_wallet = simple_wallet
         logger.debug(f"WalletAdapter initialized with {type(simple_wallet).__name__}")
     
-    # === 重要なメソッド (middleware で使用) ===
+    # === Core methods used by middleware ===
     
     def get_public_key(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
         """
@@ -98,26 +96,26 @@ class MiddlewareWalletAdapter(WalletInterface):
         try:
             logger.debug(f"create_signature called with args: {args}")
             
-            # py-sdkでは複雑な引数構造を使用
+            # py-sdk uses complex argument structures
             encryption_args = args.get('encryption_args', {})
             protocol_id = encryption_args.get('protocol_id', {})
             protocol_name = protocol_id.get('protocol_name', '')
             
-            # signature_alg に基づいて処理
+            # Process based on signature algorithm
             signature_alg = protocol_id.get('signature_alg', '')
             
-            # データを取得（複数の可能な場所）
+            # Get data from multiple possible locations
             message = args.get('data', b'')
             if not message:
                 message = args.get('message', b'')
             if not message:
-                # 直接バイト配列として提供される場合
+                # Handle case where data is directly provided as byte array
                 message = encryption_args.get('data', b'')
             
             if isinstance(message, str):
                 message = message.encode('utf-8')
             elif isinstance(message, (list, tuple)):
-                # byte array の場合
+                # Convert byte array to bytes
                 message = bytes(message)
                 
             logger.debug(f"create_signature: protocol={protocol_name}, message_len={len(message)}")
@@ -164,19 +162,19 @@ class MiddlewareWalletAdapter(WalletInterface):
         py-sdk format: internalize_action(ctx, args, originator)
         simple format: internalize_action(action: dict) -> dict
         
-        支払い処理で使用される重要なメソッド
+        Critical method used for payment processing
         """
         try:
-            # args から action データを取得
+            # Get action data from args
             action = args.get('action', {})
             if not action:
-                # args 自体が action の場合
+                # If args itself is the action
                 action = args
                 
             logger.debug(f"internalize_action: action={action}")
             result = self.simple_wallet.internalize_action(action)
             
-            # py-sdk 期待形式に変換
+            # Convert to py-sdk expected format
             py_sdk_result = {
                 'accepted': result.get('accepted', True),
                 'satoshisPaid': result.get('satoshisPaid', 0),
@@ -189,37 +187,37 @@ class MiddlewareWalletAdapter(WalletInterface):
             logger.error(f"internalize_action error: {e}")
             raise
     
-    # === その他の必須抽象メソッド (基本実装) ===
+    # === Other required abstract methods (basic implementations) ===
     
     def encrypt(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """暗号化 - 現在の簡単なウォレットでは未実装"""
+        """Encryption - not implemented in simple wallet"""
         logger.warning("encrypt method called but not implemented in simple wallet")
         raise NotImplementedError("encrypt not implemented in simple wallet")
     
     def decrypt(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """復号化 - 現在の簡単なウォレットでは未実装"""
+        """Decryption - not implemented in simple wallet"""
         logger.warning("decrypt method called but not implemented in simple wallet")
         raise NotImplementedError("decrypt not implemented in simple wallet")
     
     def create_hmac(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """HMAC作成 - 基本的な署名で代用"""
+        """HMAC creation - using signature as fallback"""
         logger.warning("create_hmac called, using signature instead")
         return self.create_signature(ctx, args, originator)
     
     def verify_hmac(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """HMAC検証 - 簡易実装"""
+        """HMAC verification - simplified implementation"""
         logger.warning("verify_hmac called, returning True (simplified)")
         return {'valid': True}
     
     def verify_signature(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """署名検証 - 簡易実装"""
+        """Signature verification - simplified implementation"""
         logger.debug("verify_signature called")
         return {'valid': True}
     
-    # === Wallet操作系メソッド ===
+    # === Wallet operation methods ===
     
     def create_action(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """アクション作成 - 簡易実装"""
+        """Action creation - simplified implementation"""
         logger.debug(f"create_action: args={args}")
         return {
             'action': args,
@@ -228,7 +226,7 @@ class MiddlewareWalletAdapter(WalletInterface):
         }
     
     def sign_action(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """アクション署名 - 簡易実装"""
+        """Action signing - simplified implementation"""
         logger.debug(f"sign_action: args={args}")
         return {
             'signed': True,
@@ -236,80 +234,80 @@ class MiddlewareWalletAdapter(WalletInterface):
         }
     
     def abort_action(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """アクション中止 - 簡易実装"""
+        """Action abort - simplified implementation"""
         logger.debug(f"abort_action: args={args}")
         return {'aborted': True}
     
     def list_actions(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """アクション一覧 - 空リスト返却"""
+        """List actions - returns empty list"""
         return {'actions': []}
     
     def list_outputs(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """出力一覧 - 空リスト返却"""
+        """List outputs - returns empty list"""
         return {'outputs': []}
     
     def relinquish_output(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """出力放棄 - 簡易実装"""
+        """Relinquish output - simplified implementation"""
         return {'relinquished': True}
     
-    # === 鍵関連メソッド ===
+    # === Key-related methods ===
     
     def reveal_counterparty_key_linkage(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """相手方キーリンケージ開示 - 未実装"""
+        """Reveal counterparty key linkage - not implemented"""
         raise NotImplementedError("reveal_counterparty_key_linkage not implemented")
     
     def reveal_specific_key_linkage(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """特定キーリンケージ開示 - 未実装"""
+        """Reveal specific key linkage - not implemented"""
         raise NotImplementedError("reveal_specific_key_linkage not implemented")
     
-    # === 証明書関連メソッド ===
+    # === Certificate-related methods ===
     
     def acquire_certificate(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """証明書取得 - 未実装"""
+        """Acquire certificate - not implemented"""
         logger.warning("acquire_certificate called but not implemented")
         return {'certificate': None}
     
     def list_certificates(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """証明書一覧 - 空リスト返却"""
+        """List certificates - returns empty list"""
         return {'certificates': []}
     
     def prove_certificate(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """証明書証明 - 簡易実装"""
+        """Prove certificate - simplified implementation"""
         return {'proof': 'mock_proof'}
     
     def relinquish_certificate(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """証明書放棄 - 簡易実装"""
+        """Relinquish certificate - simplified implementation"""
         return {'relinquished': True}
     
-    # === 検索・発見メソッド ===
+    # === Discovery methods ===
     
     def discover_by_identity_key(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """Identity Key による発見 - 簡易実装"""
+        """Discover by identity key - simplified implementation"""
         identity_key = args.get('identityKey', 'unknown')
         return {'found': False, 'identityKey': identity_key}
     
     def discover_by_attributes(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """属性による発見 - 簡易実装"""
+        """Discover by attributes - simplified implementation"""
         return {'found': False, 'attributes': args.get('attributes', {})}
     
-    # === 認証関連メソッド ===
+    # === Authentication methods ===
     
     def is_authenticated(self, ctx: Any, args: Any, originator: str) -> Any:
-        """認証状態確認 - 常にTrue返却"""
+        """Check authentication status - always returns True"""
         return {'authenticated': True}
     
     def wait_for_authentication(self, ctx: Any, args: Any, originator: str) -> Any:
-        """認証待機 - 即座に認証済み返却"""
+        """Wait for authentication - returns immediately as authenticated"""
         return {'authenticated': True}
     
-    # === ネットワーク情報メソッド ===
+    # === Network information methods ===
     
     def get_height(self, ctx: Any, args: Any, originator: str) -> Any:
-        """ブロック高取得 - モック値返却"""
+        """Get block height - returns mock value"""
         return {'height': 800000}
     
     def get_header_for_height(self, ctx: Any, args: Dict[str, Any], originator: str) -> Any:
-        """指定高のヘッダー取得 - モック値返却"""
+        """Get header for specific height - returns mock value"""
         height = args.get('height', 800000)
         return {
             'height': height,
@@ -317,11 +315,11 @@ class MiddlewareWalletAdapter(WalletInterface):
         }
     
     def get_network(self, ctx: Any, args: Any, originator: str) -> Any:
-        """ネットワーク情報取得 - mainnet返却"""
+        """Get network information - returns mainnet"""
         return {'network': 'mainnet'}
     
     def get_version(self, ctx: Any, args: Any, originator: str) -> Any:
-        """バージョン情報取得"""
+        """Get version information"""
         return {
             'version': '1.0.0',
             'adapter': 'MiddlewareWalletAdapter'
@@ -415,7 +413,7 @@ class WalletImplAdapter:
         Normalize verify_signature arguments to BRC-100 compliant flat structure.
         Transforms nested encryption_args to flat snake_case structure.
         """
-        print(f"[ADAPTER] verify_signature called! originator={originator}")
+        logger.debug(f"[ADAPTER] verify_signature called! originator={originator}")
         
         # BRC-100 compliant: Convert nested encryption_args to flat structure
         enc_args = args.get('encryption_args', {})
@@ -442,19 +440,9 @@ class WalletImplAdapter:
                 logger.debug(f"verify_signature type fixing failed: {e}")
             args = flat_args
         
-        # Debug: log flattened arguments
-        try:
-            proto_debug = args.get('protocol_id', {})
-            print(f"[ADAPTER DEBUG] protocol: {proto_debug.get('protocol', proto_debug) if isinstance(proto_debug, dict) else proto_debug}")
-            print(f"[ADAPTER DEBUG] key_id: {str(args.get('key_id', 'NONE'))[:50]}...")
-            cp_debug = args.get('counterparty', {})
-            print(f"[ADAPTER DEBUG] counterparty.type: {cp_debug.get('type', 'NONE') if isinstance(cp_debug, dict) else 'NONE'}")
-        except Exception as e:
-            print(f"[ADAPTER DEBUG] Failed to log args: {e}")
-        
         # Call underlying verify_signature and wrap result as object
         result = self.wallet_impl.verify_signature(ctx, args, originator)
-        print(f"[ADAPTER VERIFY] WalletImpl.verify_signature result: {result}")
+        logger.debug(f"[ADAPTER] verify_signature result: {result}")
         
         if isinstance(result, dict):
             # Convert dict to object with .valid attribute (Peer expects object)
@@ -464,12 +452,11 @@ class WalletImplAdapter:
                     self.error = error
             
             if 'error' in result:
-                print(f"[ADAPTER VERIFY] verify_signature error: {result['error']}")
+                logger.debug(f"[ADAPTER] verify_signature error: {result['error']}")
                 return VerifyResult(False, result['error'])
             
             valid = result.get('valid', False)
-            print(f"[ADAPTER VERIFY] signature verification: {valid}")
-            print(f"[ADAPTER VERIFY] returning VerifyResult with valid={valid}")
+            logger.debug(f"[ADAPTER] signature verification: {valid}")
             return VerifyResult(valid)
         
         return result
@@ -481,13 +468,13 @@ class WalletImplAdapter:
 
 def create_wallet_adapter(simple_wallet: Any) -> Any:
     """
-    簡単なウォレットから py-sdk 互換のウォレットアダプターを作成
+    Create py-sdk compatible wallet adapter from simple wallet
     
     Args:
-        simple_wallet: MockTestWallet などの簡単なウォレット実装、または WalletImpl
+        simple_wallet: A simple wallet implementation like MockTestWallet, or WalletImpl
         
     Returns:
-        py-sdk WalletInterface 互換のアダプター
+        An adapter compatible with py-sdk WalletInterface
     """
     if not PY_SDK_AVAILABLE:
         logger.error("py-sdk is required but not available; refusing to bypass with a simple wrapper")
