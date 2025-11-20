@@ -1,6 +1,7 @@
 """
 Real BSV Authentication Testing
-実際のBSVデータを使用したAuth機能テスト
+
+Tests authentication features using actual BSV data
 """
 
 import os
@@ -34,13 +35,13 @@ except ImportError as e:
     py_sdk_available = False
 
 class RealBSVAuthTester:
-    """実際のBSVデータを使ったAuth機能テスター"""
+    """Auth functionality tester using real BSV data"""
     
     def __init__(self):
         self.factory = RequestFactory()
         
         if py_sdk_available:
-            # 実際のBSV秘密鍵作成 (テスト用)
+            # Create real BSV private key for testing
             self.private_key = PrivateKey('L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9')
             self.public_key = self.private_key.public_key()
             self.identity_key = self.public_key.hex()
@@ -48,12 +49,12 @@ class RealBSVAuthTester:
             print(f"🔑 Generated BSV Identity Key: {self.identity_key}")
             
     def create_real_bsv_signature(self, message: str) -> dict:
-        """実際のBSV署名を作成"""
+        """Create real BSV signature"""
         if not py_sdk_available:
             return None
             
         try:
-            # BRC-77 message signing protocol使用
+            # Use BRC-77 message signing protocol
             message_bytes = message.encode('utf-8')
             signature = SignedMessage.sign(message_bytes, self.private_key)
             
@@ -65,28 +66,28 @@ class RealBSVAuthTester:
             }
             
         except Exception as e:
-            print(f"❌ BSV署名作成エラー: {e}")
+            print(f"❌ BSV signature creation error: {e}")
             return None
     
     def create_real_bsv_nonce(self) -> str:
-        """実際のBSVナンス作成"""
+        """Create real BSV nonce"""
         if not py_sdk_available:
             return "fallback_nonce_12345"
             
         try:
-            # py-sdkのランダム関数使用
+            # Use py-sdk random function
             from bsv.utils import randbytes
             nonce_bytes = randbytes(32)
             return nonce_bytes.hex()
             
         except Exception as e:
-            print(f"⚠️ ナンス作成エラー: {e}")
-            # フォールバック
+            print(f"⚠️ Nonce creation error: {e}")
+            # Fallback
             import secrets
             return secrets.token_hex(32)
     
     def create_real_auth_message(self, message_type: str = "initial") -> dict:
-        """実際のBSV AuthMessage作成"""
+        """Create real BSV AuthMessage"""
         try:
             nonce = self.create_real_bsv_nonce()
             
@@ -98,7 +99,7 @@ class RealBSVAuthTester:
                 'nonce': nonce
             }
             
-            # メッセージ署名 (実際のBSV署名)
+            # Sign message with real BSV signature
             message_text = json.dumps(message_payload, sort_keys=True)
             signature_data = self.create_real_bsv_signature(message_text)
             
@@ -112,11 +113,11 @@ class RealBSVAuthTester:
                 return message_payload
                 
         except Exception as e:
-            print(f"❌ AuthMessage作成エラー: {e}")
+            print(f"❌ AuthMessage creation error: {e}")
             return None
     
     def test_real_bsv_auth_flow(self):
-        """実際のBSVデータを使った認証フローテスト"""
+        """Test authentication flow using real BSV data"""
         print("\n🔐 Real BSV Authentication Flow Test")
         print("=" * 50)
         
@@ -125,10 +126,10 @@ class RealBSVAuthTester:
             return False
         
         try:
-            # Step 1: 実際のAuthMessage作成
+            # Step 1: Create real AuthMessage
             auth_message = self.create_real_auth_message("initial")
             if not auth_message:
-                print("❌ AuthMessage作成失敗")
+                print("❌ AuthMessage creation failed")
                 return False
             
             print(f"✅ Real AuthMessage created:")
@@ -136,7 +137,7 @@ class RealBSVAuthTester:
             print(f"   Nonce: {auth_message['nonce'][:20]}...")
             print(f"   Signature: {auth_message.get('signature', 'None')[:20]}...")
             
-            # Step 2: BSVヘッダー作成
+            # Step 2: Create BSV headers
             bsv_headers = {
                 'x-bsv-auth-version': auth_message['version'],
                 'x-bsv-auth-message-type': auth_message['messageType'],
@@ -144,14 +145,14 @@ class RealBSVAuthTester:
                 'x-bsv-auth-nonce': auth_message['nonce']
             }
             
-            # Step 3: Django requestでテスト
+            # Step 3: Test with Django request
             request = self.factory.post('/.well-known/auth')
             
-            # ヘッダー設定
+            # Set headers
             for key, value in bsv_headers.items():
                 request.META[f'HTTP_{key.upper().replace("-", "_")}'] = value
             
-            # ボディ設定
+            # Set body
             request._body = json.dumps(auth_message).encode('utf-8')
             request.content_type = 'application/json'
             
@@ -159,7 +160,7 @@ class RealBSVAuthTester:
             for key, value in bsv_headers.items():
                 print(f"   {key}: {value[:30]}{'...' if len(value) > 30 else ''}")
             
-            # Step 4: Middleware統合テスト
+            # Step 4: Middleware integration test
             self._test_middleware_integration(request, auth_message)
             
             return True
@@ -171,19 +172,19 @@ class RealBSVAuthTester:
             return False
     
     def _test_middleware_integration(self, request, auth_message):
-        """Middlewareとの統合テスト"""
+        """Middleware integration test"""
         try:
-            # BSV Middleware コンポーネントテスト
+            # BSV Middleware component test
             from .django_example.django_adapter.utils import get_identity_key, debug_request_info
             
-            # Request情報デバッグ
+            # Debug request information
             debug_info = debug_request_info(request)
             print(f"\n📊 Request Debug Info:")
             print(f"   BSV Headers: {len(debug_info['headers']['bsv_headers'])}")
             print(f"   Identity Key: {debug_info['authentication']['identity_key']}")
             print(f"   Authenticated: {debug_info['authentication']['authenticated']}")
             
-            # Utils functions テスト
+            # Utils functions test
             identity_from_utils = get_identity_key(request)
             print(f"\n🔧 Utils Test:")
             print(f"   get_identity_key(): {identity_from_utils}")
@@ -192,7 +193,7 @@ class RealBSVAuthTester:
             print(f"⚠️ Middleware integration test error: {e}")
     
     def test_signature_verification(self):
-        """実際のBSV署名検証テスト"""
+        """Test real BSV signature verification"""
         print("\n✅ Real BSV Signature Verification Test")
         print("=" * 50)
         
@@ -201,10 +202,10 @@ class RealBSVAuthTester:
             return False
         
         try:
-            # テストメッセージ
+            # Test message
             test_message = "Hello BSV Middleware Authentication!"
             
-            # 実際のBSV署名作成
+            # Create real BSV signature
             signature_data = self.create_real_bsv_signature(test_message)
             
             print(f"📝 Test Message: {test_message}")
@@ -212,7 +213,7 @@ class RealBSVAuthTester:
             print(f"📧 Address: {signature_data['address']}")
             print(f"✍️ Signature: {signature_data['signature'][:40]}...")
             
-            # BRC-77署名検証
+            # BRC-77 signature verification
             message_bytes = test_message.encode('utf-8')
             signature_bytes = bytes.fromhex(signature_data['signature'])
             
@@ -220,7 +221,7 @@ class RealBSVAuthTester:
             
             print(f"🔍 Verification Result: {'✅ VALID' if verification_result else '❌ INVALID'}")
             
-            # テキスト署名検証も試行
+            # Try text signature verification as well
             try:
                 address, text_signature = self.private_key.sign_text(test_message)
                 text_verification = verify_signed_text(test_message, address, text_signature)
@@ -240,7 +241,7 @@ class RealBSVAuthTester:
             return False
     
     def test_real_certificate_creation(self):
-        """実際のBSV証明書作成テスト"""
+        """Test real BSV certificate creation"""
         print("\n📜 Real BSV Certificate Creation Test")
         print("=" * 50)
         
@@ -249,7 +250,7 @@ class RealBSVAuthTester:
             return False
         
         try:
-            # 簡単な証明書データ
+            # Simple certificate data
             certificate_data = {
                 'type': 'identity-verification',
                 'issuer': self.identity_key,
@@ -262,7 +263,7 @@ class RealBSVAuthTester:
                 'validUntil': '2025-01-01'
             }
             
-            # 証明書署名
+            # Sign certificate
             cert_message = json.dumps(certificate_data, sort_keys=True)
             cert_signature = self.create_real_bsv_signature(cert_message)
             
@@ -284,7 +285,7 @@ class RealBSVAuthTester:
             return None
 
 def main():
-    """メインテスト実行"""
+    """Main test execution"""
     print("🧪 Real BSV Authentication Testing")
     print("=" * 60)
     
@@ -325,24 +326,24 @@ if __name__ == "__main__":
     sys.exit(0 if success else 1)
 
 
-# Pytest形式のテスト関数
+# Pytest test functions
 @pytest.mark.skipif(not py_sdk_available, reason="py-sdk not available")
 def test_real_bsv_signature_verification():
-    """Pytest形式: 実際のBSV署名検証テスト"""
+    """Pytest format: Real BSV signature verification test"""
     tester = RealBSVAuthTester()
     result = tester.test_signature_verification()
     assert result, "Signature verification should succeed"
 
 @pytest.mark.skipif(not py_sdk_available, reason="py-sdk not available")
 def test_real_bsv_auth_flow():
-    """Pytest形式: 実際のBSV認証フローテスト"""
+    """Pytest format: Real BSV authentication flow test"""
     tester = RealBSVAuthTester()
     result = tester.test_real_bsv_auth_flow()
     assert result, "Auth flow should succeed"
 
 @pytest.mark.skipif(not py_sdk_available, reason="py-sdk not available")
 def test_real_bsv_certificate_creation():
-    """Pytest形式: 実際のBSV証明書作成テスト"""
+    """Pytest format: Real BSV certificate creation test"""
     tester = RealBSVAuthTester()
     result = tester.test_real_certificate_creation()
     assert result is not None, "Certificate creation should succeed"
