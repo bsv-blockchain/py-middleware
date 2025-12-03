@@ -28,7 +28,7 @@ from examples.django_example.adapter.utils import (
     format_satoshis,
     bsv_authenticated_required,
     bsv_payment_required,
-    debug_request_info
+    debug_request_info,
 )
 
 
