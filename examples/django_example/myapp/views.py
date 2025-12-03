@@ -19,7 +19,7 @@ def simple_test(request):
     })
 
 # BSV middleware imports - Phase 2.3 Compatible
-from adapter.utils import (
+from examples.django_example.adapter.utils import (
     get_identity_key,
     get_certificates,
     is_authenticated_request,

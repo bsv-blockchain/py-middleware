@@ -267,7 +267,7 @@ def validate_transport_implementation(transport: Any) -> bool:
         True if valid, False otherwise
         
     Example:
-        >>> from examples.django_example.django_adapter import DjangoTransport
+        >>> from examples.django_example.adapter import DjangoTransport
         >>> transport = DjangoTransport(bridge)
         >>> assert validate_transport_implementation(transport)
     """
@@ -285,7 +285,7 @@ def validate_session_manager_implementation(session_manager: Any) -> bool:
         True if valid, False otherwise
         
     Example:
-        >>> from examples.django_example.django_adapter import DjangoSessionManager
+    >>> from examples.django_example.adapter import DjangoSessionManager
         >>> session_mgr = DjangoSessionManager(request.session)
         >>> assert validate_session_manager_implementation(session_mgr)
     """
