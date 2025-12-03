@@ -9,6 +9,7 @@ typing-extensions>=4.0.0
 
 # BSV SDK dependency (development branch)
 # Use local py-sdk with auth/certificates branch
+#todo create pip repo and add the URL
 -e ../py-sdk
 
 # Optional dependencies for enhanced functionality
