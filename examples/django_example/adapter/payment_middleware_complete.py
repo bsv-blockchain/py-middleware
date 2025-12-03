@@ -100,10 +100,23 @@ class BSVPaymentMiddleware:
             
             # Express equivalent: if price is 0, continue without payment (no auth required)
             if request_price <= 0:
-                self._log('debug', 'Request price is 0, continuing without payment', {
-                    'path': request.path,
-                    'price': request_price
-                })
+                self._log(
+                    'debug',
+                    'Request price is 0, continuing without payment',
+                    {
+                        'path': request.path,
+                        'price': request_price,
+                    },
+                )
+                # For free endpoints, mark payment as free and continue
+                free_payment = PaymentInfo(
+                    satoshis_paid=0,
+                    accepted=True,
+                    transaction_id='free',
+                    derivation_prefix=self._get_derivation_prefix(request),
+                )
+                request.payment = free_payment
+                request.bsv_payment = free_payment
                 return self.get_response(request)
             
             # For paid endpoints, check authentication
