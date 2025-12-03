@@ -175,7 +175,7 @@ class RealBSVAuthTester:
         """Middleware integration test"""
         try:
             # BSV Middleware component test
-            from .django_example.django_adapter.utils import get_identity_key, debug_request_info
+            from .django_example.adapter.utils import get_identity_key, debug_request_info
             
             # Debug request information
             debug_info = debug_request_info(request)

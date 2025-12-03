@@ -12,7 +12,7 @@ from django.conf import settings
 from unittest.mock import Mock, patch
 import json
 
-from examples.django_example.django_adapter.utils import (
+from examples.django_example.adapter.utils import (
     is_text_plain_request,
     get_text_content,
     get_content_by_type
@@ -180,7 +180,7 @@ Line 3 with unicode: café"""
                 self.assertEqual(result['data'], text_content)
                 self.assertEqual(result['encoding'], 'utf-8')
 
-    @patch('examples.django_example.django_adapter.utils.logger')
+    @patch('examples.django_example.adapter.utils.logger')
     def test_logging_for_text_plain(self, mock_logger):
         """Test that appropriate logging occurs"""
         request = self._create_text_request(self.test_text_utf8)

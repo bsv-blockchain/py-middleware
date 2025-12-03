@@ -37,8 +37,8 @@ wallet = Wallet(private_key='your-key')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'examples.django_example.django_adapter.auth_middleware.BSVAuthMiddleware',
-    'examples.django_example.django_adapter.payment_middleware.BSVPaymentMiddleware',
+    'examples.django_example.adapter.auth_middleware.BSVAuthMiddleware',
+    'examples.django_example.adapter.payment_middleware.BSVPaymentMiddleware',
 ]
 
 BSV_MIDDLEWARE = {

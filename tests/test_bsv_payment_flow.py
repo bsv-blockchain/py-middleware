@@ -19,7 +19,7 @@ from django.test import RequestFactory
 from django.http import HttpRequest, JsonResponse
 
 # Import middleware components for testing
-from examples.django_example.django_adapter.payment_middleware_complete import create_payment_middleware
+from examples.django_example.adapter.payment_middleware_complete import create_payment_middleware
 from bsv_middleware.types import PaymentInfo
 
 @dataclass
