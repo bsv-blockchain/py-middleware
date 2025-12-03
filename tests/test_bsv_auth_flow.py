@@ -19,8 +19,8 @@ from django.test import RequestFactory
 from django.http import HttpRequest, JsonResponse
 
 # Import middleware components for testing
-from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
-from examples.django_example.django_adapter.transport import DjangoTransport
+from examples.django_example.adapter.auth_middleware import BSVAuthMiddleware
+from examples.django_example.adapter.transport import DjangoTransport
 from bsv_middleware.py_sdk_bridge import PySdkBridge, create_nonce, verify_nonce
 
 @dataclass

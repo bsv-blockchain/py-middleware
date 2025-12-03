@@ -27,7 +27,7 @@ from django.test import RequestFactory
 from django.http import HttpRequest, JsonResponse
 
 # BSV Middleware imports
-from examples.django_example.django_adapter.payment_middleware import BSVPaymentMiddleware
+from examples.django_example.adapter.payment_middleware_complete import BSVPaymentMiddleware
 from bsv_middleware.py_sdk_bridge import PySdkBridge, create_nonce, verify_nonce
 from bsv_middleware.exceptions import BSVPaymentRequiredException
 
