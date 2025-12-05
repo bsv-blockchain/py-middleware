@@ -27,8 +27,8 @@ from examples.django_example.myapp.views import (
 )
 
 @dataclass
-class TestCase:
-    """Test case definition"""
+class APITestCase:
+    """API test case definition"""
     name: str
     endpoint: str
     method: str = 'GET'
@@ -79,7 +79,7 @@ class ComprehensiveAPITester:
             "transaction": tx_id
         })
     
-    def execute_test_case(self, test_case: TestCase) -> Dict[str, Any]:
+    def execute_test_case(self, test_case: APITestCase) -> Dict[str, Any]:
         """Execute a single test case"""
         print(f"\n🧪 Testing: {test_case.name}")
         
@@ -167,34 +167,34 @@ class ComprehensiveAPITester:
 class EndpointCoverageTester(ComprehensiveAPITester):
     """Test all endpoints comprehensively"""
     
-    def get_test_cases(self) -> List[TestCase]:
+    def get_test_cases(self) -> List[APITestCase]:
         """Define all endpoint test cases"""
         return [
             # Free endpoints
-            TestCase(
+            APITestCase(
                 name="Home endpoint - free access",
                 endpoint="/",
                 expected_fields=['message', 'endpoints', 'identity_key', 'authenticated']
             ),
-            TestCase(
+            APITestCase(
                 name="Health endpoint - free access", 
                 endpoint="/health/",
                 expected_fields=['status', 'service', 'identity_key']
             ),
-            TestCase(
+            APITestCase(
                 name="Public endpoint - free access",
                 endpoint="/public/",
                 expected_fields=['message', 'access', 'identity_key', 'authenticated']
             ),
             
             # Protected endpoints (no auth)
-            TestCase(
+            APITestCase(
                 name="Protected endpoint - no auth (should fail)",
                 endpoint="/protected/",
                 expected_status=401,
                 expected_fields=['error', 'message', 'identity_key']
             ),
-            TestCase(
+            APITestCase(
                 name="Premium endpoint - no auth (should fail)",
                 endpoint="/premium/", 
                 expected_status=401,
@@ -202,13 +202,13 @@ class EndpointCoverageTester(ComprehensiveAPITester):
             ),
             
             # Auth test endpoint
-            TestCase(
+            APITestCase(
                 name="Auth test endpoint - GET",
                 endpoint="/auth-test/",
                 method="GET",
                 expected_fields=['method', 'path', 'identity_key', 'authenticated', 'certificates', 'payment']
             ),
-            TestCase(
+            APITestCase(
                 name="Auth test endpoint - POST",
                 endpoint="/auth-test/",
                 method="POST", 
@@ -216,13 +216,13 @@ class EndpointCoverageTester(ComprehensiveAPITester):
             ),
             
             # Decorator endpoints (no auth)
-            TestCase(
+            APITestCase(
                 name="Decorator auth example - no auth (should fail)",
                 endpoint="/decorator-auth/",
                 expected_status=401,
                 expected_fields=['error', 'message']
             ),
-            TestCase(
+            APITestCase(
                 name="Decorator payment example - no auth (should fail)",
                 endpoint="/decorator-payment/",
                 expected_status=401,
