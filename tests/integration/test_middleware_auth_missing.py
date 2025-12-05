@@ -39,7 +39,7 @@ class MockWalletForClient:
         self.private_key = private_key
         self._public_key = private_key.public_key()
     
-    def get_public_key(self, ctx=None, args=None, originator=None):
+    def get_public_key(self, args=None, originator=None):
         """Get public key - BSV SDK compatible"""
         if args is None:
             args = {}
@@ -51,7 +51,7 @@ class MockWalletForClient:
             "derivationPrefix": None
         }
     
-    def create_signature(self, ctx=None, args=None, originator=None):
+    def create_signature(self, args=None, originator=None):
         """Create signature - BSV SDK compatible"""
         if not args or 'data' not in args:
             return {"signature": []}
@@ -77,11 +77,11 @@ class MockWalletForClient:
         except Exception:
             return {"signature": list(b'mock_sig_' + data[:10])}
     
-    def verify_signature(self, ctx=None, args=None, originator=None):
+    def verify_signature(self, args=None, originator=None):
         """Verify signature - simplified for testing"""
         return {"valid": True}
     
-    def create_hmac(self, ctx=None, args=None, originator=None):
+    def create_hmac(self, args=None, originator=None):
         """Create HMAC - simplified for testing"""
         import hashlib
         import hmac as hmac_lib
@@ -102,11 +102,11 @@ class MockWalletForClient:
         h = hmac_lib.new(key, data, hashlib.sha256)
         return {"hmac": list(h.digest())}
     
-    def verify_hmac(self, ctx=None, args=None, originator=None):
+    def verify_hmac(self, args=None, originator=None):
         """Verify HMAC - simplified for testing"""
         return {"valid": True}
     
-    def reveal_counterparty_key_linkage(self, ctx=None, args=None, originator=None):
+    def reveal_counterparty_key_linkage(self, args=None, originator=None):
         """Reveal counterparty key linkage"""
         if not args:
             args = {}
@@ -119,7 +119,7 @@ class MockWalletForClient:
             "encryptedLinkageProof": "mock_proof"
         }
     
-    def reveal_specific_key_linkage(self, ctx=None, args=None, originator=None):
+    def reveal_specific_key_linkage(self, args=None, originator=None):
         """Reveal specific key linkage"""
         if not args:
             args = {}
@@ -133,18 +133,18 @@ class MockWalletForClient:
             "encryptedLinkage": "mock_linkage"
         }
     
-    def list_certificates(self, ctx=None, args=None, originator=None):
+    def list_certificates(self, args=None, originator=None):
         """List certificates"""
         return {
             "totalCertificates": 0,
             "certificates": []
         }
     
-    def prove_certificate(self, ctx=None, args=None, originator=None):
+    def prove_certificate(self, args=None, originator=None):
         """Prove certificate"""
         return {"keyringForVerifier": {}}
     
-    def create_action(self, ctx=None, args=None, originator=None):
+    def create_action(self, args=None, originator=None):
         """Create action"""
         return {
             "tx": [1, 0, 0, 0, 1, 0xab, 0xcd, 0xef],
@@ -152,7 +152,7 @@ class MockWalletForClient:
             "noSendChange": []
         }
     
-    def internalize_action(self, ctx=None, args=None, originator=None):
+    def internalize_action(self, args=None, originator=None):
         """Internalize action"""
         if not args:
             args = {}
@@ -162,43 +162,43 @@ class MockWalletForClient:
             "transactionId": "mock_internalize_tx_id"
         }
     
-    def sign_action(self, ctx=None, args=None, originator=None):
+    def sign_action(self, args=None, originator=None):
         """Sign action"""
         return {"tx": [1, 0, 0, 0, 1], "txid": "signed_mock_tx"}
     
-    def abort_action(self, ctx=None, args=None, originator=None):
+    def abort_action(self, args=None, originator=None):
         """Abort action"""
         return {"aborted": True}
     
-    def list_actions(self, ctx=None, args=None, originator=None):
+    def list_actions(self, args=None, originator=None):
         """List actions"""
         return {"totalActions": 0, "actions": []}
     
-    def list_outputs(self, ctx=None, args=None, originator=None):
+    def list_outputs(self, args=None, originator=None):
         """List outputs"""
         return {"totalOutputs": 0, "outputs": [], "BEEF": None}
     
-    def encrypt(self, ctx=None, args=None, originator=None):
+    def encrypt(self, args=None, originator=None):
         """Encrypt data"""
         return {"ciphertext": b"encrypted_mock_data"}
     
-    def decrypt(self, ctx=None, args=None, originator=None):
+    def decrypt(self, args=None, originator=None):
         """Decrypt data"""
         return {"plaintext": b"decrypted_mock_data"}
     
-    def is_authenticated(self, ctx=None, args=None, originator=None):
+    def is_authenticated(self, args=None, originator=None):
         """Check if authenticated"""
         return {"authenticated": True}
     
-    def wait_for_authentication(self, ctx=None, args=None, originator=None):
+    def wait_for_authentication(self, args=None, originator=None):
         """Wait for authentication"""
         return {"authenticated": True}
     
-    def get_network(self, ctx=None, args=None, originator=None):
+    def get_network(self, args=None, originator=None):
         """Get network"""
         return {"network": "mainnet"}
     
-    def get_version(self, ctx=None, args=None, originator=None):
+    def get_version(self, args=None, originator=None):
         """Get version"""
         return {"version": "1.0.0"}
 

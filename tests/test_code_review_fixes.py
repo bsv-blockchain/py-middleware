@@ -145,7 +145,7 @@ class TestIssue2RedundantAssignmentRemoved:
             def on_data(self, handler):
                 return None
             
-            def send(self, ctx, message):
+            def send(self, message):
                 return None
         
         wallet = MockWallet()
@@ -198,7 +198,7 @@ class TestIssue3TransportReady:
             def on_data(self, handler):
                 return None  # Success
             
-            def send(self, ctx, message):
+            def send(self, message):
                 return None
         
         wallet = MockWallet()
@@ -231,7 +231,7 @@ class TestIssue3TransportReady:
             def on_data(self, handler):
                 return Exception("Transport error")  # Return error
             
-            def send(self, ctx, message):
+            def send(self, message):
                 return None
         
         wallet = MockWallet()
