@@ -69,14 +69,14 @@ class RealBSVPaymentTester:
         Express equivalent: wallet parameter in createPaymentMiddleware()
         """
         class PaymentTestWallet:
-            def get_public_key(self, ctx, args, originator):
+            def get_public_key(self, args, originator):
                 return {'publicKey': '033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8'}
             
-            def create_signature(self, ctx, args, originator):
+            def create_signature(self, args, originator):
                 message = args.get('data', b'')
                 return {'signature': f'sig_{str(message)[:20]}'}
             
-            def internalize_action(self, ctx, args, originator):
+            def internalize_action(self, args, originator):
                 """
                 Express equivalent: wallet.internalizeAction()
                 
