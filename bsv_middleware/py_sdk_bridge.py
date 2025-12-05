@@ -317,23 +317,23 @@ class DjangoTransport(BaseTransport):
     def __init__(self) -> None:
         super().__init__()
         self.peer: Optional[Peer] = None
-        self.message_callback: Optional[Callable[[Any, Any], Optional[Exception]]] = None
+        self.message_callback: Optional[Callable[[Any], Optional[Exception]]] = None
     
     def set_peer(self, peer: Peer) -> None:
         """Set the peer instance."""
         self.peer = peer
     
-    def on_data(self, callback: Callable[[Any, Any], Optional[Exception]]) -> Optional[Exception]:
-        """Set the message callback (ctx, message) -> Optional[Exception]."""
+    def on_data(self, callback: Callable[[Any], Optional[Exception]]) -> Optional[Exception]:
+        """Set the message callback (message) -> Optional[Exception]."""
         self.message_callback = callback
         return None
 
-    def send(self, ctx: Any, message: Any) -> Optional[Exception]:
+    def send(self, message: Any) -> Optional[Exception]:
         """Send an AuthMessage to the registered on_data handler."""
         if self.message_callback is None:
             return Exception("Transport has no on_data listener registered")
         try:
-            return self.message_callback(ctx, message)
+            return self.message_callback(message)
         except Exception as e:
             # Return the exception per interface contract (do not raise)
             return e

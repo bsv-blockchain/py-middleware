@@ -56,14 +56,14 @@ class PerformanceTester:
     def create_mock_wallet(self):
         """Mock wallet for performance testing"""
         class PerfWallet:
-            def get_public_key(self, ctx, args, originator):
+            def get_public_key(self, args, originator):
                 return {'publicKey': '033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8'}
             
-            def create_signature(self, ctx, args, originator):
+            def create_signature(self, args, originator):
                 message = args.get('data', b'')
                 return {'signature': f'perf_sig_{len(message)}'}
             
-            def internalize_action(self, ctx, args, originator):
+            def internalize_action(self, args, originator):
                 return {
                     'accepted': True,
                     'satoshisPaid': 100,
