@@ -306,12 +306,12 @@ class BSVPaymentMiddleware:
             try:
                 # Try py-sdk format first
                 if hasattr(self.wallet, 'internalize_action'):
-                    # Check if it's a py-sdk style wallet (requires 3 args)
+                    # Check if it's a py-sdk style wallet (requires 2 args: args, originator)
                     import inspect
                     sig = inspect.signature(self.wallet.internalize_action)
-                    if len(sig.parameters) >= 3:
-                        # py-sdk format: internalize_action(ctx, args, originator)
-                        result = self.wallet.internalize_action(None, {'action': action}, 'payment_middleware')
+                    if len(sig.parameters) >= 2:
+                        # py-sdk format: internalize_action(args, originator)
+                        result = self.wallet.internalize_action({'action': action}, 'payment_middleware')
                     else:
                         # Simple format: internalize_action(action)
                         result = self.wallet.internalize_action(action)

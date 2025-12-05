@@ -100,26 +100,25 @@ class DjangoTransport(Transport):
         Required by py-sdk Transport interface.
         
         Args:
-            callback: Function to call when data is received, signature: (ctx, message) -> Optional[Exception]
+            callback: Function to call when data is received, signature: (message) -> Optional[Exception]
             
         Returns:
             Optional[Exception]: None on success, Exception on failure
         """
         try:
             # Store the callback with proper signature handling
-            def wrapper_callback(ctx: Any, message: Any) -> Any:
+            def wrapper_callback(message: Any) -> Any:
                 self._log('info', '[WRAPPER] wrapper_callback called!')
-                self._log('info', f'[WRAPPER] ctx type: {type(ctx).__name__}')
                 self._log('info', f'[WRAPPER] message type: {type(message).__name__}')
                 self._log('info', f'[WRAPPER] message.version: {getattr(message, "version", "NONE")}')
                 self._log('info', f'[WRAPPER] message.message_type: {getattr(message, "message_type", "NONE")}')
                 
                 try:
-                    # Call the original callback with both ctx and message
-                    self._log('debug', f'wrapper_callback called with ctx={type(ctx).__name__}, message={type(message).__name__}')
+                    # Call the original callback with message only
+                    self._log('debug', f'wrapper_callback called with message={type(message).__name__}')
                     
                     self._log('info', f'[WRAPPER] About to call original callback')
-                    result = callback(ctx, message)
+                    result = callback(message)
                     self._log('info', f'[WRAPPER] Original callback returned: {result} (type: {type(result)})')
                     
                     self._log('debug', f'callback returned: {result}')
@@ -138,7 +137,7 @@ class DjangoTransport(Transport):
             self._log('error', 'Failed to register onData callback', {'error': str(e)})
             return e
     
-    def send(self, ctx: Any, message: Any) -> Optional[Exception]:
+    def send(self, message: Any) -> Optional[Exception]:
         """
         Send an AuthMessage to the connected Peer.
         
@@ -146,7 +145,6 @@ class DjangoTransport(Transport):
         This is the core method for py-sdk Transport interface.
         
         Args:
-            ctx: Context (not used in Django implementation)
             message: AuthMessage to send
             
         Returns:
@@ -172,7 +170,7 @@ class DjangoTransport(Transport):
             
             # Special handling for initialResponse - this should be sent as HTTP response
             if message_type == 'initialResponse':
-                return self._send_initial_response(ctx, message)
+                return self._send_initial_response(message)
             elif message_type != 'general':
                 return self._send_non_general_message(message)
             else:
@@ -244,7 +242,7 @@ class DjangoTransport(Transport):
         except Exception as e:
             return Exception(f'Failed to send non-general message: {str(e)}')
     
-    def _send_initial_response(self, ctx: Any, message: Any) -> Optional[Exception]:
+    def _send_initial_response(self, message: Any) -> Optional[Exception]:
         """
         Send initial authentication response as HTTP response.
         
@@ -254,9 +252,9 @@ class DjangoTransport(Transport):
         try:
             self._log('debug', 'Sending initial response as HTTP response')
             
-            # Extract request/response from context
-            request = ctx.get('request') if isinstance(ctx, dict) else None
-            response = ctx.get('response') if isinstance(ctx, dict) else None
+            # Use stored context from pending_response or request attribute
+            request = getattr(self, '_pending_request', None)
+            response = getattr(self, '_pending_response', None)
             
             if not request:
                 return Exception('No request context available for initial response')
@@ -506,14 +504,6 @@ class DjangoTransport(Transport):
                 'nonce': auth_message.nonce[:20] if auth_message.nonce else None
             })
             
-            # Step 2: Create context for py-sdk
-            ctx = {
-                'request': request,
-                'response': response,
-                'path': request.path,
-                'method': request.method
-            }
-            
             # Step 2.5: Register certificate listener (Phase 2.6: Express compatibility)
             # Equivalent to Express: peer.listenForCertificatesReceived()
             if (auth_message.identity_key and 
@@ -560,9 +550,9 @@ class DjangoTransport(Transport):
             
             # Use the message_callback if available (registered via on_data)
             if self.message_callback:
-                self._log('debug', f'Calling message_callback with ctx={ctx}, auth_message type={type(auth_message)}')
+                self._log('debug', f'Calling message_callback with auth_message type={type(auth_message)}')
                 try:
-                    error = self.message_callback(ctx, auth_message)
+                    error = self.message_callback(auth_message)
                     self._log('debug', f'message_callback returned: {error} (type: {type(error)})')
                     
                     # Handle NotImplementedError specifically
@@ -589,7 +579,7 @@ class DjangoTransport(Transport):
             
             # Step 4: Convert Peer result back to HTTP response
             self._log('debug', 'Converting peer result to HTTP')
-            return self._convert_peer_result_to_http(ctx, auth_message, request)
+            return self._convert_peer_result_to_http(auth_message, request)
             
         except Exception as e:
             self._log('error', f'Error in peer delegation: {e}')
@@ -658,7 +648,6 @@ class DjangoTransport(Transport):
     
     def _convert_peer_result_to_http(
         self, 
-        ctx: dict, 
         auth_message, 
         request: HttpRequest
     ) -> Optional[HttpResponse]:
@@ -685,7 +674,7 @@ class DjangoTransport(Transport):
                 # Check if we have an authenticated session for this identity
                 try:
                     self._log('debug', f'Checking authenticated session for {identity_key.hex()[:20]}')
-                    session = self.peer.get_authenticated_session(ctx, identity_key, 0)  # No wait time
+                    session = self.peer.get_authenticated_session(identity_key, 0)  # No wait time
                     
                     self._log('debug', f'Session result: {session}, authenticated: {getattr(session, "is_authenticated", None) if session else None}')
                     
@@ -791,16 +780,9 @@ class DjangoTransport(Transport):
                         'identity_key_type': type(getattr(auth_message, 'identity_key', None)).__name__
                     })
                     
-                    # Create context for Peer
-                    ctx = {
-                        'request': request,
-                        'response': response,
-                        'request_id': request_id
-                    }
-                    
                     # Call Peer.handle_incoming_message synchronously
-                    self._log('debug', 'Calling message_callback with ctx and auth_message')
-                    error = self.message_callback(ctx, auth_message)
+                    self._log('debug', 'Calling message_callback with auth_message')
+                    error = self.message_callback(auth_message)
                     self._log('debug', f'message_callback returned: {error}')
                     
                     if error:
@@ -893,7 +875,7 @@ class DjangoTransport(Transport):
                     print(f"[DEBUG transport] ===========================")
                     
                     # Call synchronously - Peer.handle_general_message is synchronous
-                    result = self.message_callback(None, auth_message)  # ctx, message
+                    result = self.message_callback(auth_message)
                     
                     print(f"[DEBUG transport] message_callback returned: {result} (type: {type(result)})")
                     self._log('debug', 'message_callback completed')

@@ -44,14 +44,13 @@ class TransportInterface(Protocol):
         """
         ...
     
-    def send(self, ctx: Any, message: Any) -> Optional[Exception]:
+    def send(self, message: Any) -> Optional[Exception]:
         """
         Send an AuthMessage to the connected Peer.
         
         This is the core method for py-sdk Transport interface compatibility.
         
         Args:
-            ctx: Context object (can contain request/response)
             message: AuthMessage to send
             
         Returns:
@@ -59,7 +58,7 @@ class TransportInterface(Protocol):
         """
         ...
     
-    def on_data(self, callback: Callable[[Any, Any], Optional[Exception]]) -> Optional[Exception]:
+    def on_data(self, callback: Callable[[Any], Optional[Exception]]) -> Optional[Exception]:
         """
         Register callback for incoming data.
         
@@ -67,7 +66,7 @@ class TransportInterface(Protocol):
         
         Args:
             callback: Function to call when data is received,
-                     signature: (ctx, message) -> Optional[Exception]
+                     signature: (message) -> Optional[Exception]
             
         Returns:
             None on success, Exception on failure
