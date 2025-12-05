@@ -318,7 +318,7 @@ app.use(authMiddleware)
 ```python
 # settings.py
 MIDDLEWARE = [
-    'examples.django_example.django_adapter.auth_middleware.BSVAuthMiddleware',
+    'examples.django_example.adapter.auth_middleware.BSVAuthMiddleware',
 ]
 
 BSV_MIDDLEWARE = {

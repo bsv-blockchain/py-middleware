@@ -13,7 +13,7 @@ from django.test import TestCase, RequestFactory
 from django.http import HttpRequest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from examples.django_example.django_adapter.utils import (
+from examples.django_example.adapter.utils import (
     get_multipart_data,
     is_multipart_request,
     get_uploaded_files,
@@ -23,7 +23,7 @@ from examples.django_example.django_adapter.utils import (
     bsv_authenticated_required
 )
 
-from examples.django_example.django_adapter.transport import DjangoTransport
+from examples.django_example.adapter.transport import DjangoTransport
 from bsv_middleware.py_sdk_bridge import PySdkBridge
 
 

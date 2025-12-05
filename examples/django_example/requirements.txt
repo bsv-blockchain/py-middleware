@@ -6,12 +6,6 @@ Django>=4.2.0,<5.0.0
 # BSV Middleware (local development version)
 -e ../../
 
-# BSV py-sdk (local development branch)
--e ../../../py-sdk
-
 # Development dependencies
 pytest>=7.0.0
 pytest-django>=4.5.0
-
-# Production dependencies would include:
-# git+https://github.com/bsv-blockchain/py-sdk.git@feature/auth/certificates-port

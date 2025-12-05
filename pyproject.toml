@@ -46,8 +46,9 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "django>=3.2.0",
-    "pydantic>=1.8.0",
+    "bsv-sdk @ git+https://github.com/bsv-blockchain/py-sdk.git@develop-port",
+    "django>=3.2.0,<5.0.0",
+    "pydantic>=1.8.0,<3.0.0",
     "typing-extensions>=4.0.0",
 ]
 
@@ -56,6 +57,8 @@ dev = [
     "pytest>=7.0.0",
     "pytest-django>=4.5.0",
     "pytest-cov>=4.0.0",
+    "pytest-mock>=3.6.0",
+    "pytest-asyncio>=0.18.0",
     "black>=22.0.0",
     "mypy>=0.910",
     "flake8>=4.0.0",
