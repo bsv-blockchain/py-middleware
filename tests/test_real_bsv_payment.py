@@ -1,6 +1,7 @@
 """
 Real BSV Payment Integration Test
-実際のBSV支払い処理統合テスト
+
+Integration tests for actual BSV payment processing
 
 Express middleware payment implementation reference:
 - payment-express-middleware/src/index.ts
@@ -42,7 +43,7 @@ except ImportError as e:
 
 class RealBSVPaymentTester:
     """
-    実際のBSV支払い処理統合テスター
+    Real BSV payment processing integration tester
     
     Express middleware payment flow:
     1. Calculate request price
@@ -63,19 +64,19 @@ class RealBSVPaymentTester:
     
     def create_mock_wallet(self):
         """
-        モックウォレット作成 (py-sdk WalletInterface互換)
+        Create mock wallet (py-sdk WalletInterface compatible)
         
         Express equivalent: wallet parameter in createPaymentMiddleware()
         """
         class PaymentTestWallet:
-            def get_public_key(self, ctx, args, originator):
+            def get_public_key(self, args, originator):
                 return {'publicKey': '033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8'}
             
-            def create_signature(self, ctx, args, originator):
+            def create_signature(self, args, originator):
                 message = args.get('data', b'')
                 return {'signature': f'sig_{str(message)[:20]}'}
             
-            def internalize_action(self, ctx, args, originator):
+            def internalize_action(self, args, originator):
                 """
                 Express equivalent: wallet.internalizeAction()
                 
@@ -446,7 +447,7 @@ class RealBSVPaymentTester:
 
 
 def main():
-    """メインテスト実行"""
+    """Main test execution"""
     print("🧪 Real BSV Payment Integration Testing")
     print("=" * 70)
     print("Reference: Express payment-express-middleware/src/index.ts")

@@ -1,6 +1,5 @@
 """
 Performance Testing
-パフォーマンステスト
 
 Tests:
 1. Response time measurements
@@ -43,7 +42,7 @@ except ImportError as e:
 
 
 class PerformanceTester:
-    """パフォーマンステスター"""
+    """Performance testing class"""
     
     def __init__(self):
         self.factory = RequestFactory()
@@ -55,16 +54,16 @@ class PerformanceTester:
             self.identity_key = self.private_key.public_key().hex()
     
     def create_mock_wallet(self):
-        """パフォーマンステスト用モックウォレット"""
+        """Mock wallet for performance testing"""
         class PerfWallet:
-            def get_public_key(self, ctx, args, originator):
+            def get_public_key(self, args, originator):
                 return {'publicKey': '033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8'}
             
-            def create_signature(self, ctx, args, originator):
+            def create_signature(self, args, originator):
                 message = args.get('data', b'')
                 return {'signature': f'perf_sig_{len(message)}'}
             
-            def internalize_action(self, ctx, args, originator):
+            def internalize_action(self, args, originator):
                 return {
                     'accepted': True,
                     'satoshisPaid': 100,
@@ -75,7 +74,7 @@ class PerformanceTester:
     
     def test_nonce_creation_performance(self, iterations=100):
         """
-        Test 1: Nonce作成のパフォーマンス
+        Test 1: Nonce creation performance
         
         Measures: Time to create nonces
         Target: < 10ms per nonce
@@ -116,7 +115,7 @@ class PerformanceTester:
     
     def test_nonce_verification_performance(self, iterations=100):
         """
-        Test 2: Nonce検証のパフォーマンス
+        Test 2: Nonce verification performance
         
         Measures: Time to verify nonces
         Target: < 5ms per verification
@@ -158,7 +157,7 @@ class PerformanceTester:
     
     def test_payment_internalization_performance(self, iterations=50):
         """
-        Test 3: 支払い内部化のパフォーマンス
+        Test 3: Payment internalization performance
         
         Measures: Time to internalize payments
         Target: < 50ms per payment
@@ -221,7 +220,7 @@ class PerformanceTester:
     
     def test_request_throughput(self, duration_seconds=5):
         """
-        Test 4: リクエストスループット
+        Test 4: Request throughput
         
         Measures: Requests processed per second
         Target: > 100 requests/second
@@ -259,7 +258,7 @@ class PerformanceTester:
     
     def test_concurrent_request_handling(self, num_requests=50, num_workers=10):
         """
-        Test 5: 並行リクエスト処理
+        Test 5: Concurrent request handling
         
         Measures: Concurrent request handling
         Target: All requests complete successfully
@@ -270,7 +269,7 @@ class PerformanceTester:
         print(f"🔄 Processing {num_requests} concurrent requests with {num_workers} workers...")
         
         def process_request(request_id):
-            """単一リクエスト処理"""
+            """Process single request"""
             start = time.perf_counter()
             
             # Create nonce
@@ -354,7 +353,7 @@ class PerformanceTester:
     
     def test_memory_efficiency(self, iterations=1000):
         """
-        Test 6: メモリ効率
+        Test 6: Memory efficiency
         
         Measures: Memory usage during processing
         """
@@ -401,7 +400,7 @@ class PerformanceTester:
 
 
 def main():
-    """メインテスト実行"""
+    """Main test execution"""
     print("🧪 Performance Testing")
     print("=" * 70)
     
@@ -434,7 +433,7 @@ def main():
     
     if passed_tests == total_tests:
         print("🎉 All performance tests passed!")
-        print("\n✅ Phase 2.3: パフォーマンス最適化完了")
+        print("\n✅ Performance optimization completed")
         return True
     else:
         print("⚠️ Some performance tests need attention")

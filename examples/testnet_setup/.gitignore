@@ -1,5 +1,0 @@
-# Wallet configurations (contains private keys)
-testnet_wallet_config.json
-mainnet_wallet_config.json
-*.key
-*.pem
