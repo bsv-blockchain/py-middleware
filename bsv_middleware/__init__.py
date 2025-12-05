@@ -10,7 +10,7 @@ This package provides:
 - Wallet adapters
 - Exception definitions
 
-For Django integration, see: examples/django_example/django_adapter/
+For Django integration, see: examples/django_example/adapter/
 For FastAPI integration (future), see: examples/fastapi_example/fastapi_adapter/
 """
 

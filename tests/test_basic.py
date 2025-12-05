@@ -7,9 +7,9 @@ from django.test import TestCase, RequestFactory
 from django.http import JsonResponse
 
 from bsv_middleware.types import AuthInfo, PaymentInfo, LogLevel
-from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
-from examples.django_example.django_adapter.payment_middleware import BSVPaymentMiddleware
-from examples.django_example.django_adapter.utils import (
+from examples.django_example.adapter import BSVAuthMiddleware
+from examples.django_example.adapter.payment_middleware_complete import BSVPaymentMiddleware
+from examples.django_example.adapter.utils import (
     extract_bsv_headers,
     get_identity_key,
     is_authenticated_request
@@ -135,7 +135,6 @@ class TestBSVMiddlewareIntegration(TestCase):
     def test_payment_middleware_zero_price(self):
         """Test payment middleware with zero price."""
         request = self.factory.get('/test/')
-        request.auth = AuthInfo(identity_key='test_key')
         
         # Add session to request
         from django.contrib.sessions.backends.db import SessionStore
@@ -145,12 +144,16 @@ class TestBSVMiddlewareIntegration(TestCase):
         def dummy_get_response(req):
             return JsonResponse({'message': 'test'})
         
-        payment_middleware = BSVPaymentMiddleware(dummy_get_response)
-        payment_middleware.calculate_request_price = lambda req: 0
+        # Use MockTestWallet and force price=0 via calculate_request_price
+        payment_middleware = BSVPaymentMiddleware(
+            dummy_get_response,
+            calculate_request_price=lambda req: 0,
+            wallet=MockTestWallet(),
+        )
         
         # Process request (should allow free access)
-        response = payment_middleware.process_request(request)
-        self.assertIsNone(response)  # Continue processing
+        response = payment_middleware(request)
+        self.assertEqual(response.status_code, 200)
         
         # Check payment info was set
         self.assertTrue(hasattr(request, 'payment'))
@@ -173,7 +176,10 @@ class TestBSVMiddlewarePytest:
         
         # Test that we can create middleware instances
         auth_middleware = BSVAuthMiddleware(dummy_get_response)
-        payment_middleware = BSVPaymentMiddleware(dummy_get_response)
+        payment_middleware = BSVPaymentMiddleware(
+            dummy_get_response,
+            wallet=MockTestWallet(),
+        )
         
         assert auth_middleware is not None
         assert payment_middleware is not None

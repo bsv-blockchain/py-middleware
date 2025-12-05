@@ -21,7 +21,7 @@ from bsv.wallet.wallet_impl import WalletImpl
 from bsv.keys import PrivateKey
 
 # Middleware imports
-from examples.django_example.django_adapter.auth_middleware import BSVAuthMiddleware
+from examples.django_example.adapter.auth_middleware import BSVAuthMiddleware
 
 # BSV SDK imports for AuthFetch client
 try:
