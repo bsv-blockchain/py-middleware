@@ -35,7 +35,7 @@ graph TB
     end
 
     subgraph "Wallet Layer"
-        WalletImpl["Wallet Implementation<br/>🔑 Key Management<br/>✍️ Digital Signatures"]
+        ProtoWallet["Wallet Implementation<br/>🔑 Key Management<br/>✍️ Digital Signatures"]
         MockWallet["Mock Test Wallet<br/>🧪 Testing & Development<br/>🔧 Simulation"]
     end
 
@@ -54,7 +54,7 @@ graph TB
     PeerAuth --> SessionMgr
     PeerAuth --> CertStore
 
-    WalletAdapter --> WalletImpl
+    WalletAdapter --> ProtoWallet
     WalletAdapter --> MockWallet
 
     style AuthMW fill:#e3f2fd
@@ -748,7 +748,7 @@ graph LR
    ```python
    from bsv_middleware.wallet_adapter import WalletAdapter
 
-   wallet = YourWalletImplementation()
+   wallet = YourProtoWalletementation()
    adapter = WalletAdapter(wallet)
    ```
 

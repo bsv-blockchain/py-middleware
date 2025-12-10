@@ -17,7 +17,7 @@ from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 
 # py-sdk imports
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keys import PrivateKey
 
 # Middleware imports
@@ -219,7 +219,7 @@ class TestMissingHighPriority:
         """Test setup"""
         # Create mock wallet
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False

@@ -326,17 +326,17 @@ class MiddlewareWalletAdapter(WalletInterface):
         }
 
 
-class WalletImplAdapter:
+class ProtoWalletAdapter:
     """
-    Lightweight adapter for WalletImpl to convert get_public_key response format.
-    WalletImpl returns Dict, but Peer expects object with public_key attribute.
+    Lightweight adapter for ProtoWallet to convert get_public_key response format.
+    ProtoWallet returns Dict, but Peer expects object with public_key attribute.
     """
     def __init__(self, wallet_impl: Any):
         self.wallet_impl = wallet_impl
-        logger.debug("Created WalletImplAdapter")
+        logger.debug("Created ProtoWalletAdapter")
     
     def get_public_key(self, args: Dict[str, Any], originator: str) -> Any:
-        """Convert WalletImpl Dict response to object with public_key attribute."""
+        """Convert ProtoWallet Dict response to object with public_key attribute."""
         result = self.wallet_impl.get_public_key(args, originator)
         
         if isinstance(result, dict):
@@ -360,7 +360,7 @@ class WalletImplAdapter:
     
     def create_signature(self, args: Dict[str, Any], originator: str) -> Any:
         """
-        Convert WalletImpl Dict response to object with signature attribute.
+        Convert ProtoWallet Dict response to object with signature attribute.
         Transforms nested encryption_args structure to BRC-100 compliant flat structure.
         
         py-sdk Peer uses:
@@ -543,7 +543,7 @@ class WalletImplAdapter:
         return result
 
     def __getattr__(self, name: str) -> Any:
-        """Delegate all other methods to the wrapped WalletImpl."""
+        """Delegate all other methods to the wrapped ProtoWallet."""
         return getattr(self.wallet_impl, name)
 
 
@@ -552,7 +552,7 @@ def create_wallet_adapter(simple_wallet: Any) -> Any:
     Create py-sdk compatible wallet adapter from simple wallet
     
     Args:
-        simple_wallet: A simple wallet implementation like MockTestWallet, or WalletImpl
+        simple_wallet: A simple wallet implementation like MockTestWallet, or ProtoWallet
         
     Returns:
         An adapter compatible with py-sdk WalletInterface
@@ -564,10 +564,10 @@ def create_wallet_adapter(simple_wallet: Any) -> Any:
             details={"module": "wallet_adapter", "hint": "Install py-sdk and ensure it is importable"}
         )
     
-    # Check if wallet is already a full WalletImpl (has create_action, internalize_action, etc.)
+    # Check if wallet is already a full ProtoWallet (has create_action, internalize_action, etc.)
     if hasattr(simple_wallet, 'create_action') and hasattr(simple_wallet, 'internalize_action'):
-        logger.debug("Wallet is WalletImpl, wrapping with WalletImplAdapter")
-        return WalletImplAdapter(simple_wallet)
+        logger.debug("Wallet is ProtoWallet, wrapping with ProtoWalletAdapter")
+        return ProtoWalletAdapter(simple_wallet)
     
     # Otherwise, wrap it with full adapter
     return MiddlewareWalletAdapter(simple_wallet)

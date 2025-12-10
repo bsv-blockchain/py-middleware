@@ -23,7 +23,7 @@ from threading import Thread
 import time
 
 # py-sdk imports
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keys import PrivateKey
 
 # Middleware imports
@@ -50,7 +50,7 @@ class TestCertificateExpanded:
     def setup(self):
         """Test setup"""
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False
@@ -158,7 +158,7 @@ class TestServerRestartPersistence:
     def setup(self):
         """Test setup"""
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False
@@ -238,7 +238,7 @@ class TestIdentityContextExpanded:
     def setup(self):
         """Test setup"""
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False
@@ -382,7 +382,7 @@ class TestContentTypeVariations:
     def setup(self):
         """Test setup"""
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False
@@ -511,7 +511,7 @@ class TestHTTPMethodVariations:
     def setup(self):
         """Test setup"""
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False
@@ -599,7 +599,7 @@ class TestPaymentMiddlewareConfiguration:
     def setup(self):
         """Test setup"""
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False

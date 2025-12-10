@@ -13,7 +13,7 @@ from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 
 # py-sdk imports
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keys import PrivateKey
 
 # Middleware imports
@@ -37,7 +37,7 @@ class TestMiddlewareAuthentication:
         """Test setup (local only)"""
         # Create mock wallet (no testnet required)
         self.private_key = PrivateKey()
-        self.wallet = WalletImpl(
+        self.wallet = ProtoWallet(
             private_key=self.private_key,
             permission_callback=lambda action: True,
             load_env=False
@@ -595,7 +595,7 @@ class TestMiddlewareAuthentication:
         print("  ✅ Equivalent to TypeScript/Go approach")
         print()
         print("This is NOT a py-sdk test:")
-        print("  ❌ NOT testing WalletImpl")
+        print("  ❌ NOT testing ProtoWallet")
         print("  ❌ NOT testing balance checks")
         print("  ❌ NOT testing WhatsOnChain API")
         print()
