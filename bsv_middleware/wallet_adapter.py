@@ -362,32 +362,63 @@ class WalletImplAdapter:
         """
         Convert WalletImpl Dict response to object with signature attribute.
         Transforms nested encryption_args structure to BRC-100 compliant flat structure.
+        
+        py-sdk Peer uses:
+            encryption_args.protocol_id = {securityLevel: 2, protocol: 'auth'}
+            encryption_args.key_id = 'nonce1 nonce2'
+            encryption_args.counterparty = {type: 3, counterparty: PublicKey}
+        
+        py-wallet-toolbox expects:
+            protocolID = [securityLevel, protocol]
+            keyID = 'nonce1 nonce2'
+            counterparty = hex_string
         """
+        logger.debug(f"[ADAPTER] create_signature called with args: {list(args.keys())}")
+        
         # BRC-100 compliant: Convert nested encryption_args to flat structure
         enc_args = args.get('encryption_args', {})
         if enc_args:
-            # Flatten the structure for BRC-100 compliance (snake_case)
+            logger.debug(f"[ADAPTER] Found encryption_args: {list(enc_args.keys())}")
+            
+            # Extract protocol_id and convert to protocolID format [securityLevel, protocol]
+            protocol_id = enc_args.get('protocol_id', {})
+            if isinstance(protocol_id, dict):
+                security_level = protocol_id.get('securityLevel', 2)
+                protocol = protocol_id.get('protocol', 'auth')
+                protocol_id_list = [security_level, protocol]
+            else:
+                protocol_id_list = protocol_id
+            
+            # Extract counterparty - py-sdk sends {type: 3, counterparty: PublicKey}
+            counterparty_arg = enc_args.get('counterparty')
+            counterparty_hex = None
+            if isinstance(counterparty_arg, dict):
+                cp_value = counterparty_arg.get('counterparty')
+                if cp_value:
+                    # Convert PublicKey to hex string
+                    if hasattr(cp_value, 'hex'):
+                        counterparty_hex = cp_value.hex()
+                    elif isinstance(cp_value, str):
+                        counterparty_hex = cp_value
+            elif counterparty_arg:
+                if hasattr(counterparty_arg, 'hex'):
+                    counterparty_hex = counterparty_arg.hex()
+                else:
+                    counterparty_hex = str(counterparty_arg)
+            
+            # Build flat args for py-wallet-toolbox
             flat_args = {
-                'protocol_id': enc_args.get('protocol_id'),
-                'key_id': enc_args.get('key_id'),
-                'counterparty': enc_args.get('counterparty'),
+                'protocolID': protocol_id_list,
+                'keyID': enc_args.get('key_id', '1'),
+                'counterparty': counterparty_hex,
                 'data': args.get('data'),
-                'hash_to_directly_sign': args.get('hash_to_directly_sign'),
             }
             
-            # Normalize counterparty type to py-sdk/go definitions
-            # CounterpartyType: ANYONE=1, SELF=2, OTHER=3
-            try:
-                cp = flat_args.get('counterparty')
-                if isinstance(cp, dict):
-                    # If no type and a counterparty pubkey is present, assume OTHER=3
-                    if 'type' not in cp and ('counterparty' in cp and cp['counterparty']):
-                        cp['type'] = 3
-                else:
-                    # If provided as hex/pubkey, wrap as OTHER=3
-                    flat_args['counterparty'] = {'type': 3, 'counterparty': cp}
-            except Exception as e:
-                logger.debug(f"create_signature type fixing failed: {e}")
+            # Add optional fields
+            if args.get('hash_to_directly_sign'):
+                flat_args['hashToDirectlySign'] = args.get('hash_to_directly_sign')
+            
+            logger.debug(f"[ADAPTER] Converted to flat_args: protocolID={flat_args.get('protocolID')}, keyID={flat_args.get('keyID')}, counterparty={flat_args.get('counterparty', '')[:20] if flat_args.get('counterparty') else None}...")
             
             args = flat_args
         
@@ -418,26 +449,76 @@ class WalletImplAdapter:
         # BRC-100 compliant: Convert nested encryption_args to flat structure
         enc_args = args.get('encryption_args', {})
         if enc_args:
-            # Flatten the structure for BRC-100 compliance (snake_case)
+            # Extract protocol_id - may be nested object or flat
+            protocol_id = enc_args.get('protocol_id')
+            if isinstance(protocol_id, dict):
+                # Convert nested protocol_id to BRC-100 format
+                protocol_id_val = [protocol_id.get('securityLevel', 2), protocol_id.get('protocol', '')]
+            else:
+                protocol_id_val = protocol_id
+            
+            # Normalize signature to bytes
+            signature = args.get('signature')
+            if signature is not None:
+                if isinstance(signature, (list, tuple)):
+                    signature = bytes(signature)
+                elif isinstance(signature, str):
+                    try:
+                        signature = bytes.fromhex(signature)
+                    except ValueError:
+                        pass  # Keep as-is if not valid hex
+            
+            # Normalize data to bytes
+            data = args.get('data')
+            if data is not None:
+                if isinstance(data, (list, tuple)):
+                    data = bytes(data)
+            
+            # Flatten the structure for BRC-100 compliance (camelCase for ToolboxWallet)
             flat_args = {
-                'protocol_id': enc_args.get('protocol_id'),
-                'key_id': enc_args.get('key_id'),
+                'protocolID': protocol_id_val,  # camelCase for ToolboxWallet
+                'keyID': enc_args.get('key_id'),  # camelCase for ToolboxWallet
                 'counterparty': enc_args.get('counterparty'),
-                'for_self': enc_args.get('for_self', False),
-                'data': args.get('data'),
-                'hash_to_directly_verify': args.get('hash_to_directly_verify'),
-                'signature': args.get('signature'),
+                'forSelf': enc_args.get('for_self', False),  # camelCase for ToolboxWallet
+                'data': data,
+                'signature': signature,
             }
-            # Normalize counterparty type to py-sdk/go definitions (ANYONE=1, SELF=2, OTHER=3)
+            # Only include hashToDirectlyVerify if it's not None
+            hash_to_verify = args.get('hash_to_directly_verify')
+            if hash_to_verify is not None:
+                flat_args['hashToDirectlyVerify'] = hash_to_verify
+            
+            # Normalize counterparty to hex string (ToolboxWallet expects string)
             try:
                 cp = flat_args.get('counterparty')
                 if isinstance(cp, dict):
-                    if 'type' not in cp and ('counterparty' in cp and cp['counterparty']):
-                        cp['type'] = 3
-                else:
-                    flat_args['counterparty'] = {'type': 3, 'counterparty': cp}
+                    # Extract counterparty from nested dict
+                    inner_cp = cp.get('counterparty')
+                    if inner_cp is not None:
+                        # Convert PublicKey object to hex string
+                        if hasattr(inner_cp, 'hex') and callable(inner_cp.hex):
+                            flat_args['counterparty'] = inner_cp.hex()
+                        elif hasattr(inner_cp, '__str__'):
+                            cp_str = str(inner_cp)
+                            # Extract hex from string like "<PublicKey hex=...>"
+                            if 'hex=' in cp_str:
+                                flat_args['counterparty'] = cp_str.split('hex=')[1].rstrip('>')
+                            else:
+                                flat_args['counterparty'] = cp_str
+                        else:
+                            flat_args['counterparty'] = str(inner_cp)
+                    else:
+                        flat_args['counterparty'] = None
+                elif cp is not None:
+                    # Convert PublicKey object to hex string
+                    if hasattr(cp, 'hex') and callable(cp.hex):
+                        flat_args['counterparty'] = cp.hex()
+                    elif isinstance(cp, str):
+                        flat_args['counterparty'] = cp
+                    else:
+                        flat_args['counterparty'] = str(cp)
             except Exception as e:
-                logger.debug(f"verify_signature type fixing failed: {e}")
+                logger.debug(f"verify_signature counterparty conversion failed: {e}")
             args = flat_args
         
         # Call underlying verify_signature and wrap result as object

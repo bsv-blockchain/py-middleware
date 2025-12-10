@@ -64,11 +64,19 @@ class BSVAuthMiddleware(MiddlewareMixin):
         try:
             bsv_config = getattr(settings, 'BSV_MIDDLEWARE', {})
             
-            # Required configuration
+            # Required configuration - support both direct wallet and lazy getter
             self.wallet = bsv_config.get('WALLET')
             if not self.wallet:
+                # Try WALLET_GETTER for lazy initialization
+                wallet_getter = bsv_config.get('WALLET_GETTER')
+                if callable(wallet_getter):
+                    self.wallet = wallet_getter()
+                    # Cache it back to settings for future use
+                    bsv_config['WALLET'] = self.wallet
+            
+            if not self.wallet:
                 raise BSVServerMisconfiguredException(
-                    'You must configure BSV_MIDDLEWARE with a WALLET in Django settings.'
+                    'You must configure BSV_MIDDLEWARE with a WALLET or WALLET_GETTER in Django settings.'
                 )
             
             # Optional configuration with defaults (equivalent to Express options)
@@ -195,7 +203,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
             
             # Continue to next middleware/view (equivalent to Express next())
             if self.get_response:
-                return self.get_response(request)
+                response = self.get_response(request)
+                # Call process_response to add auth headers
+                return self.process_response(request, response)
             
             # If no get_response (shouldn't happen in normal Django), return empty response
             return HttpResponse()
@@ -270,17 +280,214 @@ class BSVAuthMiddleware(MiddlewareMixin):
         Django middleware process_response hook.
         
         This is called after the view is executed.
+        Adds BRC-104 authentication headers to the response.
+        
+        Equivalent to Express: res.set() for auth headers
         """
         try:
-            # Add BSV-specific headers if needed
-            if hasattr(request, 'auth') and request.auth.identity_key != 'unknown':
-                response['X-BSV-Identity-Key'] = request.auth.identity_key
+            # Debug logging - write to file for visibility
+            has_auth = hasattr(request, 'auth')
+            identity_key = getattr(request.auth, 'identity_key', 'NO_AUTH') if has_auth else 'NO_AUTH_ATTR'
+            has_version = request.headers.get('x-bsv-auth-version')
+            
+            debug_msg = f"[AUTH MIDDLEWARE process_response] has_auth={has_auth}, identity_key={identity_key[:20] if identity_key else None}..., has_version={has_version}, status={response.status_code}"
+            logger.warning(debug_msg)  # Use warning level to ensure visibility
+            
+            # Check if this request has x-bsv-auth headers (general message)
+            if not request.headers.get('x-bsv-auth-version'):
+                logger.warning(f"[AUTH MIDDLEWARE process_response] No x-bsv-auth-version header, skipping")
+                return response
+            
+            # Check if this is an authenticated request with general message
+            if not hasattr(request, 'auth') or request.auth.identity_key == 'unknown':
+                logger.warning(f"[AUTH MIDDLEWARE process_response] Not authenticated (has_auth={has_auth}, identity_key={identity_key}), skipping")
+                return response
+            
+            # Add BRC-104 authentication headers to response
+            # This is required for the client to verify the server's response
+            logger.warning(f"[AUTH MIDDLEWARE process_response] Adding auth headers to response")
+            response = self._add_auth_response_headers(request, response)
             
             return response
             
         except Exception as e:
             logger.error(f"Error in process_response: {e}")
+            import traceback
+            traceback.print_exc()
             return response  # Return original response on error
+    
+    def _add_auth_response_headers(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
+        """
+        Add BRC-104 authentication headers to response.
+        
+        This creates a signed response that the client can verify.
+        Equivalent to Express transport.send() for general messages.
+        
+        Key insight: For signature verification to work, the key_id must be:
+        - Server signs with: {server_nonce} {client_session_nonce}
+        - Client verifies with: {message.nonce} {session.session_nonce}
+        
+        Where:
+        - server_nonce = new nonce generated for this response
+        - client_session_nonce = client's session nonce (stored as peer_nonce in server's session)
+        """
+        import base64
+        import os
+        
+        try:
+            # Get request ID from incoming request
+            request_id = request.headers.get('x-bsv-auth-request-id', '')
+            client_request_nonce = request.headers.get('x-bsv-auth-nonce', '')
+            client_identity_key = request.headers.get('x-bsv-auth-identity-key', '')
+            
+            # Generate server nonce for this response
+            server_nonce = base64.b64encode(os.urandom(32)).decode('utf-8')
+            
+            # Get server's identity key
+            from bsv_middleware.wallet_adapter import create_wallet_adapter
+            adapted_wallet = create_wallet_adapter(self.wallet)
+            identity_result = adapted_wallet.get_public_key({'identityKey': True}, 'auth-response')
+            server_identity_key = identity_result.publicKey if hasattr(identity_result, 'publicKey') else str(identity_result)
+            
+            # Get client's session nonce from the session
+            # This is stored as peer_nonce in the server's session with this client
+            client_session_nonce = ''
+            try:
+                if hasattr(self.transport, 'peer') and self.transport.peer:
+                    session = self.transport.peer.session_manager.get_session(client_identity_key)
+                    if session:
+                        # peer_nonce is the client's session nonce
+                        client_session_nonce = session.peer_nonce or ''
+                        logger.debug(f"Got client session nonce: {client_session_nonce[:20]}...")
+            except Exception as e:
+                logger.warning(f"Failed to get client session nonce: {e}")
+            
+            # Build payload for signing (request_id + status + headers + body)
+            response_payload = self._build_response_payload(request_id, response)
+            
+            # Sign the response with correct key_id: {server_nonce} {client_session_nonce}
+            # This matches what the client expects when verifying
+            signature = self._sign_response(
+                adapted_wallet,
+                response_payload,
+                server_nonce,  # First part of key_id
+                client_session_nonce,  # Second part of key_id (client's session nonce)
+                client_identity_key
+            )
+            
+            # Add auth headers to response
+            response['x-bsv-auth-version'] = '0.1'
+            response['x-bsv-auth-message-type'] = 'general'
+            response['x-bsv-auth-identity-key'] = server_identity_key
+            response['x-bsv-auth-nonce'] = server_nonce
+            response['x-bsv-auth-your-nonce'] = client_request_nonce  # Echo back client's request nonce
+            response['x-bsv-auth-signature'] = signature
+            response['x-bsv-auth-request-id'] = request_id
+            
+            logger.debug(f"Added auth headers to response: identity_key={server_identity_key[:20]}...")
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to add auth response headers: {e}")
+            import traceback
+            traceback.print_exc()
+            return response
+    
+    def _build_response_payload(self, request_id: str, response: HttpResponse) -> bytes:
+        """Build response payload for signing."""
+        import struct
+        
+        buf = bytearray()
+        
+        # Request ID (32 bytes from base64)
+        import base64
+        try:
+            request_id_bytes = base64.b64decode(request_id)
+        except Exception:
+            request_id_bytes = b'\x00' * 32
+        buf.extend(request_id_bytes[:32].ljust(32, b'\x00'))
+        
+        # Status code (varint)
+        self._write_varint(buf, response.status_code)
+        
+        # Headers count (varint) - we only include x-bsv-* non-auth headers
+        included_headers = []
+        for key, value in response.items():
+            key_lower = key.lower()
+            if key_lower.startswith('x-bsv-') and not key_lower.startswith('x-bsv-auth'):
+                included_headers.append((key_lower, value))
+        
+        self._write_varint(buf, len(included_headers))
+        for key, value in sorted(included_headers):
+            self._write_string(buf, key)
+            self._write_string(buf, value)
+        
+        # Body
+        content = response.content if hasattr(response, 'content') else b''
+        if content:
+            self._write_varint(buf, len(content))
+            buf.extend(content)
+        else:
+            # -1 for no body
+            buf.append(0xFF)
+            buf.extend(struct.pack('<Q', 0xFFFFFFFFFFFFFFFF))
+        
+        return bytes(buf)
+    
+    def _write_varint(self, buf: bytearray, value: int) -> None:
+        """Write Bitcoin-style varint."""
+        import struct
+        if value < 0xFD:
+            buf.append(value)
+        elif value <= 0xFFFF:
+            buf.append(0xFD)
+            buf.extend(struct.pack('<H', value))
+        elif value <= 0xFFFFFFFF:
+            buf.append(0xFE)
+            buf.extend(struct.pack('<I', value))
+        else:
+            buf.append(0xFF)
+            buf.extend(struct.pack('<Q', value))
+    
+    def _write_string(self, buf: bytearray, s: str) -> None:
+        """Write length-prefixed string."""
+        b = s.encode('utf-8')
+        self._write_varint(buf, len(b))
+        buf.extend(b)
+    
+    def _sign_response(
+        self,
+        wallet,
+        payload: bytes,
+        client_nonce: str,
+        server_nonce: str,
+        client_identity_key: str
+    ) -> str:
+        """Sign the response payload."""
+        try:
+            # Create signature using wallet
+            # Note: Protocol name must only contain letters, numbers and spaces
+            sig_result = wallet.create_signature({
+                'protocolID': [2, 'auth message signature'],
+                'keyID': f"{client_nonce} {server_nonce}",
+                'counterparty': client_identity_key,
+                'data': list(payload),
+            }, 'auth-response')
+            
+            if sig_result and hasattr(sig_result, 'signature'):
+                sig = sig_result.signature
+                if isinstance(sig, bytes):
+                    return sig.hex()
+                elif isinstance(sig, list):
+                    return bytes(sig).hex()
+                return str(sig)
+            
+            return ''
+            
+        except Exception as e:
+            logger.error(f"Failed to sign response: {e}")
+            return ''
     
     def _log_integration_error(self, error: Exception) -> None:
         """統合エラーの詳細をログ記録"""
