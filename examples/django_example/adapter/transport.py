@@ -263,8 +263,16 @@ class DjangoTransport(Transport):
             identity_key_raw: Any = getattr(message, 'identity_key', {})
             identity_key_str: str = identity_key_raw.hex() if hasattr(identity_key_raw, 'hex') else str(identity_key_raw)
             
+            # Convert signature to hex string (handle bytes, list, or string)
             signature_raw: Any = getattr(message, 'signature', b'')
-            signature_str: str = signature_raw.hex() if isinstance(signature_raw, bytes) else str(signature_raw)
+            if isinstance(signature_raw, bytes):
+                signature_str = signature_raw.hex()
+            elif isinstance(signature_raw, (list, tuple)):
+                signature_str = bytes(signature_raw).hex()
+            elif isinstance(signature_raw, str):
+                signature_str = signature_raw
+            else:
+                signature_str = str(signature_raw)
             
             response_data: Dict[str, Any] = {
                 'status': 'success',
@@ -387,6 +395,60 @@ class DjangoTransport(Transport):
             headers['x-bsv-auth-requested-certificates'] = json.dumps(message.requestedCertificates)
         
         return headers
+    
+    def _add_auth_headers_to_error_response(
+        self,
+        response: HttpResponse,
+        request: HttpRequest,
+        auth_message: Any
+    ) -> HttpResponse:
+        """
+        Add BRC-104 authentication headers to error responses.
+        
+        This allows clients to properly parse error responses from the server.
+        Even error responses should include auth headers for protocol compliance.
+        """
+        import base64
+        import os
+        
+        try:
+            # Get request ID from incoming request
+            request_id = request.headers.get('x-bsv-auth-request-id', '')
+            client_nonce = request.headers.get('x-bsv-auth-nonce', '')
+            
+            # Generate server nonce for this response
+            server_nonce = base64.b64encode(os.urandom(32)).decode('utf-8')
+            
+            # Get server's identity key from wallet
+            try:
+                from bsv_middleware.wallet_adapter import create_wallet_adapter
+                wallet = self.py_sdk_bridge.wallet if hasattr(self.py_sdk_bridge, 'wallet') else None
+                if wallet:
+                    adapted_wallet = create_wallet_adapter(wallet)
+                    identity_result = adapted_wallet.get_public_key({'identityKey': True}, 'auth-error-response')
+                    server_identity_key = identity_result.publicKey if hasattr(identity_result, 'publicKey') else str(identity_result)
+                else:
+                    server_identity_key = 'unknown'
+            except Exception as e:
+                self._log('warn', f'Failed to get server identity key: {e}')
+                server_identity_key = 'unknown'
+            
+            # Add auth headers to response
+            response['x-bsv-auth-version'] = '0.1'
+            response['x-bsv-auth-message-type'] = 'general'
+            response['x-bsv-auth-identity-key'] = server_identity_key
+            response['x-bsv-auth-nonce'] = server_nonce
+            response['x-bsv-auth-your-nonce'] = client_nonce
+            response['x-bsv-auth-signature'] = ''  # Empty signature for error responses
+            response['x-bsv-auth-request-id'] = request_id
+            
+            self._log('debug', f'Added auth headers to error response: identity_key={server_identity_key[:20] if server_identity_key else "unknown"}...')
+            
+            return response
+            
+        except Exception as e:
+            self._log('error', f'Failed to add auth headers to error response: {e}')
+            return response
     
     def _parse_general_message_payload(self, payload: List[int]) -> tuple[int, Dict[str, str], List[int]]:
         """
@@ -598,9 +660,13 @@ class DjangoTransport(Transport):
             message_type = request.headers.get('x-bsv-auth-message-type', '')
             identity_key_hex = request.headers.get('x-bsv-auth-identity-key', '')
             nonce = request.headers.get('x-bsv-auth-nonce', '')
+            request_id = request.headers.get('x-bsv-auth-request-id', '')
+            
+            print(f"[DEBUG _convert_http_to_auth_message] version={version}, message_type={message_type}, identity_key={identity_key_hex[:20] if identity_key_hex else 'NONE'}..., nonce={nonce[:20] if nonce else 'NONE'}..., request_id={request_id[:20] if request_id else 'NONE'}...")
             
             # Check if this is a BSV auth request - must have at least one BSV header
             if not any([version, message_type, identity_key_hex, nonce]):
+                print(f"[DEBUG _convert_http_to_auth_message] No BSV headers found, returning None")
                 return None
             
             # Set defaults only if BSV headers are present
@@ -777,8 +843,13 @@ class DjangoTransport(Transport):
                     auth_message = self._dict_to_auth_message(message_data)
                     self._log('debug', 'AuthMessage created successfully', {
                         'message_type': getattr(auth_message, 'message_type', 'unknown'),
-                        'identity_key_type': type(getattr(auth_message, 'identity_key', None)).__name__
+                        'identity_key_type': type(getattr(auth_message, 'identity_key', None)).__name__,
+                        'initial_nonce': getattr(auth_message, 'initial_nonce', '')[:30] + '...' if getattr(auth_message, 'initial_nonce', '') else 'None'
                     })
+                    
+                    # Store request context for _send_initial_response to use
+                    self._pending_request = request
+                    self._pending_response = response
                     
                     # Call Peer.handle_incoming_message synchronously
                     self._log('debug', 'Calling message_callback with auth_message')
@@ -906,7 +977,9 @@ class DjangoTransport(Transport):
                 self._log('info', 'General message authenticated, continuing to view', {
                     'identityKey': request.auth.identity_key[:20] + '...'
                 })
-                print(f"[DEBUG transport] Authentication SUCCESS")
+                print(f"[DEBUG transport] Authentication SUCCESS", flush=True)
+                import sys
+                sys.stdout.flush()
                 
                 # TypeScript compatibility: Check for payment header
                 payment_header = request.headers.get('X-BSV-Payment')
@@ -921,10 +994,22 @@ class DjangoTransport(Transport):
                 # Authentication failed or not set
                 self._log('warn', 'General message authentication failed')
                 print(f"[DEBUG transport] Authentication FAILED, returning 401")
-                return JsonResponse({
+                
+                # Build 401 response with BRC-104 headers for proper client handling
+                error_response = JsonResponse({
                     'status': 'error',
                     'message': 'Authentication required'
                 }, status=401)
+                
+                # Add BRC-104 headers even for error responses
+                # This allows the client to properly parse the response
+                error_response = self._add_auth_headers_to_error_response(
+                    error_response,
+                    request,
+                    auth_message
+                )
+                
+                return error_response
             
         except Exception as e:
             self._log('error', f'Failed to handle general message: {e}')
@@ -1464,13 +1549,18 @@ class DjangoTransport(Transport):
                 message_data['payload'] = b""
             
             # Convert signature from hex to bytes
-            if message_data['signature']:
+            signature_raw = message_data['signature']
+            print(f"[SERVER DEBUG] Raw signature from header: {signature_raw[:40] if signature_raw else 'EMPTY'}...")
+            if signature_raw:
                 try:
-                    signature_hex = message_data['signature']
-                    signature_bytes = bytes.fromhex(signature_hex)
+                    signature_bytes = bytes.fromhex(signature_raw)
                     message_data['signature'] = signature_bytes
+                    print(f"[SERVER DEBUG] Parsed signature length: {len(signature_bytes)} bytes")
                 except Exception as e:
                     self._log('warn', f'Failed to parse signature hex: {e}')
+                    print(f"[SERVER DEBUG] Failed to parse signature: {e}")
+            else:
+                print(f"[SERVER DEBUG] No signature in header!")
             
             self._log('debug', 'Built AuthMessage from request', {
                 'messageType': message_data['messageType'],
