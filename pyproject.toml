@@ -138,6 +138,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = ["."]
 testpaths = ["tests"]
 addopts = [
     "--tb=short",
