@@ -20,7 +20,7 @@ from django.test import RequestFactory, Client
 from django.http import HttpRequest, JsonResponse
 
 # Import all views for testing
-from example.django_example.myapp.views import (
+from examples.django_example.myapp.views import (
     home, health, public_endpoint, protected_endpoint, 
     premium_endpoint, auth_test, decorator_auth_example, 
     decorator_payment_example
