@@ -736,9 +736,18 @@ class DjangoTransport(Transport):
                 except Exception as e:
                     self._log('warning', f'Invalid identity key: {e}')
             
-            # Extract payload from request body
+            # Extract payload
+            # For initialRequest: just the request body
+            # For general messages: full BRC-104 payload (request_id + method + path + headers + body)
             payload = None
-            if request.body:
+            if message_type == 'general':
+                # Build full BRC-104 payload for general messages
+                payload = self._build_general_message_payload(request)
+                print(f"[TRANSPORT FIX] Built general message payload: {len(payload)} bytes")
+                import hashlib
+                print(f"[TRANSPORT FIX] Payload digest: {hashlib.sha256(payload).hexdigest()}")
+            elif request.body:
+                # For initialRequest, just use the body
                 payload = request.body
             
             # Create AuthMessage with py-sdk compatible structure
@@ -1652,13 +1661,12 @@ class DjangoTransport(Transport):
                     self._log('warn', f'Failed to parse requested certificates: {e}')
             
             # Build payload for general messages (matching TypeScript buildAuthMessageFromRequest)
-            # For general messages, the client sends the payload in request.body
-            # We should use that directly for signature verification
+            # For general messages, build the full BRC-104 payload (request_id + method + path + headers + body)
             if message_data['messageType'] == 'general':
-                # The client sends the binary payload in request.body
-                # Use it directly for signature verification
-                payload = request.body if hasattr(request, 'body') and request.body else b''
+                # Build full BRC-104 payload structure
+                payload = self._build_general_message_payload(request)
                 message_data['payload'] = payload
+                print(f"[SERVER DEBUG] Built full BRC-104 payload: {len(payload)} bytes")
                 # Debug: log payload digest for comparison with client (force print for debugging)
                 try:
                     import hashlib

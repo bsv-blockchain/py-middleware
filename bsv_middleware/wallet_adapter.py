@@ -442,13 +442,14 @@ class ProtoWalletAdapter:
     def verify_signature(self, args: Dict[str, Any], originator: str) -> Any:
         """
         Normalize verify_signature arguments to BRC-100 compliant flat structure.
-        Transforms nested encryption_args to flat snake_case structure.
+        Handles BOTH nested encryption_args format AND flat py-sdk format.
         """
         logger.debug(f"[ADAPTER] verify_signature called! originator={originator}")
         
-        # BRC-100 compliant: Convert nested encryption_args to flat structure
+        # Check if args are in nested encryption_args format or flat py-sdk format
         enc_args = args.get('encryption_args', {})
         if enc_args:
+            # Legacy nested format with encryption_args
             # Extract protocol_id - may be nested object or flat
             protocol_id = enc_args.get('protocol_id')
             if isinstance(protocol_id, dict):
@@ -520,6 +521,58 @@ class ProtoWalletAdapter:
             except Exception as e:
                 logger.debug(f"verify_signature counterparty conversion failed: {e}")
             args = flat_args
+        else:
+            # Flat py-sdk format - convert in place
+            print(f"[ADAPTER FIX] Processing flat py-sdk format")
+            print(f"[ADAPTER FIX] Input args keys: {list(args.keys())}")
+            
+            # Convert protocolID from dict to list
+            protocol_id = args.get('protocolID')
+            print(f"[ADAPTER FIX] protocolID type: {type(protocol_id)}, value: {protocol_id}")
+            if isinstance(protocol_id, dict):
+                args['protocolID'] = [protocol_id.get('securityLevel', 2), protocol_id.get('protocol', '')]
+                print(f"[ADAPTER FIX] Converted protocolID: {args['protocolID']}")
+            
+            # Convert counterparty from dict to hex string
+            counterparty = args.get('counterparty')
+            print(f"[ADAPTER FIX] counterparty type: {type(counterparty)}")
+            if isinstance(counterparty, dict):
+                inner_cp = counterparty.get('counterparty')
+                print(f"[ADAPTER FIX] inner_cp type: {type(inner_cp)}")
+                if inner_cp is not None:
+                    if hasattr(inner_cp, 'hex') and callable(inner_cp.hex):
+                        args['counterparty'] = inner_cp.hex()
+                    elif hasattr(inner_cp, '__str__'):
+                        cp_str = str(inner_cp)
+                        if 'hex=' in cp_str:
+                            args['counterparty'] = cp_str.split('hex=')[1].rstrip('>')
+                        else:
+                            args['counterparty'] = cp_str
+                    else:
+                        args['counterparty'] = str(inner_cp)
+                    print(f"[ADAPTER FIX] Converted counterparty: {args['counterparty'][:40]}...")
+            
+            import sys
+            print(f"[ADAPTER FIX] About to process signature and data")
+            sys.stdout.flush()
+            
+            # Ensure signature is bytes
+            signature = args.get('signature')
+            print(f"[ADAPTER FIX] signature: type={type(signature)}, is_bytes={isinstance(signature, bytes)}")
+            sys.stdout.flush()
+            if signature is not None and isinstance(signature, (list, tuple)):
+                args['signature'] = bytes(signature)
+                print(f"[ADAPTER FIX] Converted signature list to bytes")
+                sys.stdout.flush()
+            
+            # Ensure data is bytes  
+            data = args.get('data')
+            print(f"[ADAPTER FIX] data: type={type(data)}, is_bytes={isinstance(data, bytes)}")
+            sys.stdout.flush()
+            if data is not None and isinstance(data, (list, tuple)):
+                args['data'] = bytes(data)
+                print(f"[ADAPTER FIX] Converted data list to bytes")
+                sys.stdout.flush()
         
         # Call underlying verify_signature and wrap result as object
         result = self.wallet_impl.verify_signature(args, originator)
@@ -539,6 +592,51 @@ class ProtoWalletAdapter:
             valid = result.get('valid', False)
             logger.debug(f"[ADAPTER] signature verification: {valid}")
             return VerifyResult(valid)
+        
+        return result
+    
+    def create_hmac(self, args: Dict[str, Any], originator: str) -> Any:
+        """
+        Delegate create_hmac to underlying wallet_impl (ProtoWallet).
+        
+        Since py-sdk's create_nonce() now matches TypeScript exactly with flat structure,
+        we can pass args directly without conversion.
+        """
+        logger.debug("[ProtoWalletAdapter] create_hmac called with flat args (no conversion needed)")
+        result = self.wallet_impl.create_hmac(args, originator)
+        
+        if isinstance(result, dict):
+            if 'error' in result:
+                logger.error(f"create_hmac error: {result['error']}")
+                raise Exception(result['error'])
+            
+            class HmacResult:
+                def __init__(self, hmac: bytes):
+                    self.hmac = hmac
+            
+            hmac_bytes = result.get('hmac')
+            if hmac_bytes:
+                return HmacResult(hmac_bytes)
+        
+        return result
+    
+    def verify_hmac(self, args: Dict[str, Any], originator: str) -> Any:
+        """
+        Delegate verify_hmac to underlying wallet_impl (ProtoWallet).
+        
+        Since py-sdk's verify_nonce() now matches TypeScript exactly with flat structure,
+        we can pass args directly without conversion.
+        """
+        logger.debug("[ProtoWalletAdapter] verify_hmac called with flat args (no conversion needed)")
+        result = self.wallet_impl.verify_hmac(args, originator)
+        
+        if isinstance(result, dict):
+            class VerifyHmacResult:
+                def __init__(self, valid: bool):
+                    self.valid = valid
+            
+            valid = result.get('valid', False)
+            return VerifyHmacResult(valid)
         
         return result
 

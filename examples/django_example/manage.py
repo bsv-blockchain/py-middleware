@@ -15,6 +15,10 @@ def main() -> None:
     if repo_root_str not in sys.path:
         sys.path.insert(0, repo_root_str)
 
+    # Enable debug logging for key derivation
+    if "BSV_DEBUG" not in os.environ:
+        os.environ["BSV_DEBUG"] = "1"
+
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
     try:
         from django.core.management import execute_from_command_line
