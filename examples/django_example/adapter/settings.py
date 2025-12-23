@@ -26,7 +26,9 @@ try:
     
     # Create a test wallet with a private key
     # In production, this would be loaded from secure storage
-    test_private_key = PrivateKey.from_wif("L4rK1yDtCWekvXuE6oXD9jCYgFNVsK8osvzUJSEjLHBbiexqjJT")
+    # NOTE: This must be DIFFERENT from the client's private key!
+    # Using a new server key: L3GsJd3SLaqq3LLN2uvSHBZcYfBEdfGiWCj4SAiGk2YcNZHbgQNy
+    test_private_key = PrivateKey.from_wif("L3GsJd3SLaqq3LLN2uvSHBZcYfBEdfGiWCj4SAiGk2YcNZHbgQNy")
     actual_wallet = Wallet(test_private_key)
     
     # Create wallet interface that implements WalletInterface
