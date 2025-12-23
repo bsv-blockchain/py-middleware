@@ -303,20 +303,10 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 logger.warning(f"[AUTH MIDDLEWARE process_response] Not authenticated (has_auth={has_auth}, identity_key={identity_key}), skipping")
                 return response
             
-            # Only add auth headers to auth endpoint responses (marked by _bsv_auth_response)
-            # This prevents regular API responses from being incorrectly processed as auth messages by the client
-            is_auth_response = hasattr(request, '_bsv_auth_response')
-            if is_auth_response:
-                logger.warning(f"[AUTH MIDDLEWARE process_response] Adding auth headers to auth endpoint response")
-                response = self._add_auth_response_headers(request, response)
-            else:
-                logger.warning(f"[AUTH MIDDLEWARE process_response] Adding auth headers (without message-type) to API response")
-                # Add auth headers but omit message-type to prevent client from processing as auth message
-                response['x-bsv-auth-version'] = '0.1'
-                if hasattr(request, 'auth') and request.auth and hasattr(request.auth, 'identity_key'):
-                    response['x-bsv-auth-identity-key'] = request.auth.identity_key
-                    # Add signature header for client authentication verification
-                    response['x-bsv-auth-signature'] = '00' * 32  # Dummy signature
+            # Add auth headers to ALL authenticated responses
+            # The client ALWAYS expects auth headers on responses, even for authenticated sessions
+            logger.warning(f"[AUTH MIDDLEWARE process_response] Adding auth headers to authenticated response")
+            response = self._add_auth_response_headers(request, response)
             
             return response
             
@@ -344,14 +334,25 @@ class BSVAuthMiddleware(MiddlewareMixin):
         import base64
         import os
         
+        logger.warning(f"[_add_auth_response_headers] START - adding auth headers to response")
+        
         try:
-            # Get request ID from incoming request
+            # Get request ID and nonces from incoming request
             request_id = request.headers.get('x-bsv-auth-request-id', '')
-            client_request_nonce = request.headers.get('x-bsv-auth-nonce', '')
+            client_request_nonce = request.headers.get('x-bsv-auth-nonce', '')  # Client's fresh request nonce
             client_identity_key = request.headers.get('x-bsv-auth-identity-key', '')
             
+            logger.warning(f"[_add_auth_response_headers] client_request_nonce: {client_request_nonce[:20]}...")
+            
             # Generate server nonce for this response
+            # CRITICAL: TypeScript Peer.processGeneralMessage (line 822) only verifies message.yourNonce (the echoed client nonce)
+            # The server's own nonce (message.nonce) is NOT verified by the client!
+            # TypeScript client creates nonces with just Random(32), no HMAC! (Peer.ts line 131)
+            # So the server can also use a simple random nonce without HMAC
+            import base64
+            import os
             server_nonce = base64.b64encode(os.urandom(32)).decode('utf-8')
+            logger.warning(f"[_add_auth_response_headers] Generated random nonce (no HMAC): {server_nonce[:40]}...")
             
             # Get server's identity key
             from bsv_middleware.wallet_adapter import create_wallet_adapter
@@ -386,22 +387,34 @@ class BSVAuthMiddleware(MiddlewareMixin):
             )
             
             # Add auth headers to response
+            logger.warning(f"[_add_auth_response_headers] Setting response headers...")
             response['x-bsv-auth-version'] = '0.1'
             response['x-bsv-auth-message-type'] = 'general'
             response['x-bsv-auth-identity-key'] = server_identity_key
             response['x-bsv-auth-nonce'] = server_nonce
-            response['x-bsv-auth-your-nonce'] = client_request_nonce  # Echo back client's request nonce
+            # CRITICAL: Echo back the CLIENT's session nonce (from initial handshake)!
+            # The client will verify this with verifyNonce(yourNonce, wallet, 'self'), 
+            # so it MUST be the client's own nonce that they created with counterparty='self'!
+            response['x-bsv-auth-your-nonce'] = client_session_nonce  # CLIENT's session nonce from handshake!
             response['x-bsv-auth-signature'] = signature
             response['x-bsv-auth-request-id'] = request_id
             
-            logger.debug(f"Added auth headers to response: identity_key={server_identity_key[:20]}...")
+            logger.warning(f"[_add_auth_response_headers] Setting x-bsv-auth-your-nonce to CLIENT's session nonce: {client_session_nonce[:40] if client_session_nonce else 'NONE'}...")
+            logger.warning(f"[_add_auth_response_headers] response['x-bsv-auth-your-nonce'] = {response.get('x-bsv-auth-your-nonce', 'NOT SET')[:40] if response.get('x-bsv-auth-your-nonce') else 'NOT SET'}...")
+            logger.warning(f"[_add_auth_response_headers] Headers set! Checking response object...")
+            logger.warning(f"[_add_auth_response_headers] response['x-bsv-auth-version'] = {response.get('x-bsv-auth-version')}")
+            logger.warning(f"[_add_auth_response_headers] response['x-bsv-auth-signature'] = {response.get('x-bsv-auth-signature', 'MISSING')[:40]}...")
+            
+            logger.warning(f"[_add_auth_response_headers] SUCCESS - Added auth headers: nonce={server_nonce[:20]}..., identity={server_identity_key[:20]}..., signature={signature[:40]}...")
             
             return response
             
         except Exception as e:
-            logger.error(f"Failed to add auth response headers: {e}")
+            logger.error(f"[_add_auth_response_headers] EXCEPTION: {e}")
             import traceback
+            logger.error(f"[_add_auth_response_headers] Traceback:\n{traceback.format_exc()}")
             traceback.print_exc()
+            # Return response without auth headers on error
             return response
     
     def _build_response_payload(self, request_id: str, response: HttpResponse) -> bytes:

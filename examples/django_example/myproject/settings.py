@@ -6,11 +6,56 @@ middleware in a Django application.
 """
 
 import os
+import sys
 from pathlib import Path
 from typing import Dict, Any
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Add local py-sdk and py-middleware to sys.path (for development)
+# This ensures we use local versions instead of installed packages
+lib_root = BASE_DIR.parent.parent.parent  # Relative to django_example: ../../.. (py-lib root)
+home_py_lib = Path.home() / 'py-lib'
+
+# Try to find py-sdk and py-middleware in common locations
+possible_sdk_paths = [
+    lib_root / 'py-sdk',  # Relative to django_example: ../../../py-sdk
+    home_py_lib / 'py-sdk',  # Common development location
+    Path('/home/sneakyfox/py-lib/py-sdk'),  # Absolute path
+]
+
+possible_middleware_paths = [
+    lib_root / 'py-middleware',  # Relative to django_example: ../../../py-middleware
+    home_py_lib / 'py-middleware',  # Common development location
+    Path('/home/sneakyfox/py-lib/py-middleware'),  # Absolute path
+]
+
+# Find and add py-sdk to path
+found_sdk = None
+for path in possible_sdk_paths:
+    if path.exists() and (path / 'bsv').exists():
+        if str(path) not in sys.path:
+            sys.path.insert(0, str(path))
+        found_sdk = path
+        print(f"[SETTINGS] Using local py-sdk from: {path}")
+        break
+
+# Find and add py-middleware to path
+found_middleware = None
+for path in possible_middleware_paths:
+    if path.exists() and (path / 'bsv_middleware').exists():
+        if str(path) not in sys.path:
+            sys.path.insert(0, str(path))
+        found_middleware = path
+        print(f"[SETTINGS] Using local py-middleware from: {path}")
+        break
+
+# Warn if local dependencies not found (will fall back to installed packages)
+if not found_sdk:
+    print(f"[SETTINGS] WARNING: Local py-sdk not found, will use installed package")
+if not found_middleware:
+    print(f"[SETTINGS] WARNING: Local py-middleware not found, will use installed package")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-example-key-do-not-use-in-production'
@@ -130,41 +175,36 @@ LOGGING = {
 
 # Create BSV wallet for operations
 try:
-    # Try to use actual py-sdk components
-    print("[INFO] Attempting to create py-sdk wallet...")
+    # Try to use actual py-sdk ProtoWallet (required for proper key derivation)
+    print("[INFO] Attempting to create py-sdk ProtoWallet...")
     
-    # Use WalletAdapter to make any wallet compatible
+    from bsv.wallet.wallet_impl import ProtoWallet
+    from bsv.keys import PrivateKey
+    
+    # Create a test private key for the server
+    # In production, this would be loaded from secure storage
+    # NOTE: This must be DIFFERENT from the client's private key!
+    # Using a new server key: L3GsJd3SLaqq3LLN2uvSHBZcYfBEdfGiWCj4SAiGk2YcNZHbgQNy
+    test_private_key = PrivateKey.from_wif("L3GsJd3SLaqq3LLN2uvSHBZcYfBEdfGiWCj4SAiGk2YcNZHbgQNy")
+    
+    # Create ProtoWallet instance (this implements the full WalletInterface)
+    proto_wallet = ProtoWallet(test_private_key)
+    
+    # Use WalletAdapter to wrap ProtoWallet for middleware compatibility
     from bsv_middleware.wallet_adapter import create_wallet_adapter
+    bsv_wallet = create_wallet_adapter(proto_wallet)
     
-    # Simple wallet for examples - in production use actual py-sdk wallet
-    class ExampleWallet:
-        """Example wallet for demonstration."""
-        
-        def sign_message(self, message: bytes) -> bytes:
-            return b'example_signature_' + message[:10]
-        
-        def get_public_key(self) -> str:
-            return '033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8'
-        
-        def internalize_action(self, action: dict) -> dict:
-            """Process payment action."""
-            return {
-                'accepted': True,
-                'satoshisPaid': action.get('satoshis', 0),
-                'transactionId': f"example_tx_{action.get('satoshis', 0)}"
-            }
-    
-    # Create adapted wallet that works with py-sdk interfaces
-    base_wallet = ExampleWallet()
-    bsv_wallet = create_wallet_adapter(base_wallet)
-    print(f"[OK] Created adapted wallet with public key: {base_wallet.get_public_key()}")
+    print(f"[OK] Created ProtoWallet with public key: {proto_wallet.public_key.hex()}")
+    print(f"[OK] Wallet adapter created successfully")
     
 except Exception as e:
-    print(f"[WARN] Using fallback mock wallet: {e}")
+    print(f"[ERROR] Failed to create ProtoWallet: {e}")
+    import traceback
+    traceback.print_exc()
     
-    # Fallback mock wallet
+    # Fallback mock wallet (will not work for real authentication)
     class MockWallet:
-        """Mock wallet for demonstration purposes."""
+        """Mock wallet for demonstration purposes (NOT for production)."""
         
         def sign_message(self, message: bytes) -> bytes:
             return b'mock_signature'
@@ -180,6 +220,7 @@ except Exception as e:
             }
     
     bsv_wallet = MockWallet()
+    print(f"[WARN] Using fallback mock wallet - authentication will NOT work properly!")
 
 # Certificate received callback
 def handle_certificates_received(sender_public_key, certificates, request, response):
