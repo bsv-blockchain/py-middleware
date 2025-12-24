@@ -207,6 +207,10 @@ class DjangoSessionManagerAdapter:
         """
         Add a PeerSession to Django session storage.
         
+        NOTE: This adapter is for optional persistence to Django HTTP sessions.
+        The primary session management uses DefaultSessionManager (in-memory),
+        which correctly handles multiple concurrent sessions per identity key.
+        
         Args:
             session: PeerSession object from py-sdk
         """
@@ -238,6 +242,10 @@ class DjangoSessionManagerAdapter:
     def get_session(self, identifier: str) -> Optional[Any]:
         """
         Get a PeerSession from Django session storage.
+        
+        NOTE: This adapter is for optional persistence only.
+        Primary lookups use DefaultSessionManager which supports
+        lookups by both session_nonce and identity_key.
         
         Args:
             identifier: Identity key (public key hex)
