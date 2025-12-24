@@ -1415,35 +1415,40 @@ class DjangoTransport(Transport):
                             # Skip request ID (32 bytes)
                             reader.read_bytes(32)
                             
+                            # Note: -1 is encoded as 0xFFFFFFFFFFFFFFFF (sentinel for "no data")
+                            NEG_ONE = 0xFFFFFFFFFFFFFFFF
+                            
                             # Skip method
                             method_len = reader.read_var_int_num()
-                            if method_len and method_len > 0:
+                            if method_len and method_len > 0 and method_len != NEG_ONE:
                                 reader.read_bytes(method_len)
                             
                             # Skip path
                             path_len = reader.read_var_int_num()
-                            if path_len and path_len > 0:
+                            if path_len and path_len > 0 and path_len != NEG_ONE:
                                 reader.read_bytes(path_len)
                             
                             # Skip search
                             search_len = reader.read_var_int_num()
-                            if search_len and search_len > 0:
+                            if search_len and search_len > 0 and search_len != NEG_ONE:
                                 reader.read_bytes(search_len)
                             
                             # Skip headers
                             n_headers = reader.read_var_int_num()
-                            if n_headers and n_headers > 0:
-                                for _ in range(n_headers):
+                            if n_headers and n_headers > 0 and n_headers != NEG_ONE:
+                                # Sanity check to prevent overflow in range()
+                                if n_headers > 1000:  # Reasonable limit for HTTP headers
+                                    raise ValueError(f"Unreasonable header count: {n_headers}")
+                                for _ in range(int(n_headers)):
                                     key_len = reader.read_var_int_num()
-                                    if key_len and key_len > 0:
+                                    if key_len and key_len > 0 and key_len != NEG_ONE:
                                         reader.read_bytes(key_len)
                                     value_len = reader.read_var_int_num()
-                                    if value_len and value_len > 0:
+                                    if value_len and value_len > 0 and value_len != NEG_ONE:
                                         reader.read_bytes(value_len)
                             
                             # Read body (this is the JSON-RPC request)
                             body_len = reader.read_var_int_num()
-                            NEG_ONE = 0xFFFFFFFFFFFFFFFF
                             if body_len and body_len > 0 and body_len != NEG_ONE:
                                 extracted_body = reader.read_bytes(body_len)
                                 # Replace request.body with extracted JSON-RPC body
