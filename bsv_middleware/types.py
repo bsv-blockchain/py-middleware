@@ -77,10 +77,18 @@ class PaymentInfo:
 
 @dataclass
 class BSVPayment:
-    """BSV payment data structure"""
+    """BSV payment data structure
+    
+    Compatible with Express/Go BSVPayment interface:
+    - derivationPrefix: string
+    - derivationSuffix: string
+    - transaction: base64 encoded transaction
+    """
     derivation_prefix: str
-    satoshis: int
-    transaction: Optional[Dict[str, Any]] = None
+    derivation_suffix: str = ""
+    satoshis: int = 0
+    transaction: Optional[str] = None  # base64 encoded transaction
+    sender_identity_key: Optional[str] = None  # For internalize_action
     
     def __post_init__(self) -> None:
         """Validate payment data after initialization"""
