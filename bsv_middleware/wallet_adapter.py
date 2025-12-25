@@ -523,22 +523,16 @@ class ProtoWalletAdapter:
             args = flat_args
         else:
             # Flat py-sdk format - convert in place
-            print(f"[ADAPTER FIX] Processing flat py-sdk format")
-            print(f"[ADAPTER FIX] Input args keys: {list(args.keys())}")
-            
+
             # Convert protocolID from dict to list
             protocol_id = args.get('protocolID')
-            print(f"[ADAPTER FIX] protocolID type: {type(protocol_id)}, value: {protocol_id}")
             if isinstance(protocol_id, dict):
                 args['protocolID'] = [protocol_id.get('securityLevel', 2), protocol_id.get('protocol', '')]
-                print(f"[ADAPTER FIX] Converted protocolID: {args['protocolID']}")
-            
+
             # Convert counterparty from dict to hex string
             counterparty = args.get('counterparty')
-            print(f"[ADAPTER FIX] counterparty type: {type(counterparty)}")
             if isinstance(counterparty, dict):
                 inner_cp = counterparty.get('counterparty')
-                print(f"[ADAPTER FIX] inner_cp type: {type(inner_cp)}")
                 if inner_cp is not None:
                     if hasattr(inner_cp, 'hex') and callable(inner_cp.hex):
                         args['counterparty'] = inner_cp.hex()
@@ -550,29 +544,16 @@ class ProtoWalletAdapter:
                             args['counterparty'] = cp_str
                     else:
                         args['counterparty'] = str(inner_cp)
-                    print(f"[ADAPTER FIX] Converted counterparty: {args['counterparty'][:40]}...")
-            
-            import sys
-            print(f"[ADAPTER FIX] About to process signature and data")
-            sys.stdout.flush()
-            
+
             # Ensure signature is bytes
             signature = args.get('signature')
-            print(f"[ADAPTER FIX] signature: type={type(signature)}, is_bytes={isinstance(signature, bytes)}")
-            sys.stdout.flush()
             if signature is not None and isinstance(signature, (list, tuple)):
                 args['signature'] = bytes(signature)
-                print(f"[ADAPTER FIX] Converted signature list to bytes")
-                sys.stdout.flush()
-            
-            # Ensure data is bytes  
+
+            # Ensure data is bytes
             data = args.get('data')
-            print(f"[ADAPTER FIX] data: type={type(data)}, is_bytes={isinstance(data, bytes)}")
-            sys.stdout.flush()
             if data is not None and isinstance(data, (list, tuple)):
                 args['data'] = bytes(data)
-                print(f"[ADAPTER FIX] Converted data list to bytes")
-                sys.stdout.flush()
         
         # Call underlying verify_signature and wrap result as object
         result = self.wallet_impl.verify_signature(args, originator)
