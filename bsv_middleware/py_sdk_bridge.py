@@ -280,12 +280,20 @@ class PySdkBridge:
         Parse payment header JSON.
         
         Equivalent to Express: JSON.parse(paymentHeader)
+        
+        Expected format (Express/Go compatible):
+        {
+            "derivationPrefix": "...",
+            "derivationSuffix": "...",
+            "transaction": "base64..."
+        }
         """
         try:
             payment_data = json.loads(payment_header)
             
             return BSVPayment(
                 derivation_prefix=payment_data.get('derivationPrefix', ''),
+                derivation_suffix=payment_data.get('derivationSuffix', ''),
                 satoshis=payment_data.get('satoshis', 0),
                 transaction=payment_data.get('transaction')
             )
