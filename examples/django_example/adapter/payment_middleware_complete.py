@@ -209,14 +209,9 @@ class BSVPaymentMiddleware:
             if not payment_data:
                 return self._payment_error('ERR_MALFORMED_PAYMENT', 'Invalid payment format.')
             
-            # Express equivalent: verify nonce
-            if not self._verify_nonce(payment_data):
-                return self._payment_error('ERR_INVALID_PAYMENT', 'Invalid payment nonce.')
-            
-            # Express equivalent: verify derivation prefix
-            expected_prefix = self._get_derivation_prefix(request)
-            if payment_data.get('derivationPrefix') != expected_prefix:
-                return self._payment_error('ERR_INVALID_DERIVATION_PREFIX', 'Invalid derivation prefix.')
+            # Express equivalent: verify derivation prefix (verifyNonce in Express)
+            if not self._verify_derivation_prefix(payment_data):
+                return self._payment_error('ERR_INVALID_DERIVATION_PREFIX', 'The derivation prefix is not valid.')
             
             # Express equivalent: process payment with wallet
             payment_result = self._process_payment_with_wallet(payment_data, expected_price)
@@ -228,7 +223,7 @@ class BSVPaymentMiddleware:
                 satoshis_paid=payment_result.get('satoshisPaid', expected_price),
                 accepted=True,
                 transaction_id=payment_result.get('transactionId', 'unknown'),
-                derivation_prefix=payment_data.get('derivationPrefix', expected_prefix)
+                derivation_prefix=payment_data.get('derivationPrefix', '')
             )
             request.payment = payment_info
             request.bsv_payment = payment_info  # For compatibility with tests and utils
@@ -240,7 +235,13 @@ class BSVPaymentMiddleware:
             })
             
             # Express equivalent: continue to next middleware
-            return self.get_response(request)
+            # Get the response first, then add the payment header
+            response = self.get_response(request)
+            
+            # Express equivalent: res.set({ 'x-bsv-payment-satoshis-paid': String(requestPrice) })
+            response['x-bsv-payment-satoshis-paid'] = str(payment_info.satoshis_paid)
+            
+            return response
             
         except Exception as e:
             self._log('error', f'Payment verification error: {e}')
@@ -251,13 +252,20 @@ class BSVPaymentMiddleware:
         Parse payment data from header.
         
         Equivalent to Express payment parsing logic.
+        
+        Expected format (Express/Go compatible):
+        {
+            "derivationPrefix": "...",
+            "derivationSuffix": "...",
+            "transaction": "base64..."
+        }
         """
         try:
             # Express equivalent: parse JSON payment data
             payment_data = json.loads(payment_header)
             
-            # Validate required fields
-            required_fields = ['nonce', 'derivationPrefix', 'beef']
+            # Validate required fields (Express/Go compatible)
+            required_fields = ['derivationPrefix', 'derivationSuffix', 'transaction']
             if not all(field in payment_data for field in required_fields):
                 self._log('warn', 'Missing required payment fields', {
                     'provided': list(payment_data.keys()),
@@ -274,23 +282,23 @@ class BSVPaymentMiddleware:
             self._log('error', f'Payment parsing error: {e}')
             return None
     
-    def _verify_nonce(self, payment_data: Dict[str, Any]) -> bool:
+    def _verify_derivation_prefix(self, payment_data: Dict[str, Any]) -> bool:
         """
-        Verify payment nonce.
+        Verify derivation prefix.
         
-        Equivalent to Express: verifyNonce() functionality.
+        Equivalent to Express: verifyNonce(paymentData.derivationPrefix, wallet)
         """
         try:
-            nonce = payment_data.get('nonce')
-            if not nonce:
+            derivation_prefix = payment_data.get('derivationPrefix')
+            if not derivation_prefix:
                 return False
             
             # Express equivalent: verify nonce using py-sdk
             from bsv_middleware.py_sdk_bridge import verify_nonce
-            return verify_nonce(nonce)
+            return verify_nonce(derivation_prefix)
             
         except Exception as e:
-            self._log('error', f'Nonce verification error: {e}')
+            self._log('error', f'Derivation prefix verification error: {e}')
             return False
     
     def _process_payment_with_wallet(self, payment_data: Dict[str, Any], expected_price: int) -> Dict[str, Any]:
@@ -298,15 +306,30 @@ class BSVPaymentMiddleware:
         Process payment using wallet.
         
         Equivalent to Express: wallet.internalizeAction() functionality.
+        
+        Express format (payment-express-middleware/src/index.ts lines 99-112):
+        wallet.internalizeAction({
+            tx: paymentData.transaction,
+            outputs: [{
+                paymentRemittance: {
+                    derivationPrefix: paymentData.derivationPrefix,
+                    derivationSuffix: paymentData.derivationSuffix,
+                    senderIdentityKey: req.auth.identityKey
+                },
+                outputIndex: 0,
+                protocol: 'wallet payment'
+            }],
+            description: 'Payment for request'
+        })
         """
         try:
-            # Express equivalent: prepare action for wallet
+            # Express equivalent: prepare action for wallet (Express/Go compatible)
             action = {
                 'type': 'payment',
                 'satoshis': expected_price,
-                'beef': payment_data.get('beef'),
+                'transaction': payment_data.get('transaction'),
                 'derivationPrefix': payment_data.get('derivationPrefix'),
-                'nonce': payment_data.get('nonce')
+                'derivationSuffix': payment_data.get('derivationSuffix')
             }
             
             self._log('debug', 'Processing payment with wallet', {
