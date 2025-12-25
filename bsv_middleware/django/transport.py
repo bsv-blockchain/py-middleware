@@ -108,18 +108,18 @@ class DjangoTransport(Transport):
         try:
             # Store the callback with proper signature handling
             def wrapper_callback(message: Any) -> Any:
-                self._log('info', '[WRAPPER] wrapper_callback called!')
-                self._log('info', f'[WRAPPER] message type: {type(message).__name__}')
-                self._log('info', f'[WRAPPER] message.version: {getattr(message, "version", "NONE")}')
-                self._log('info', f'[WRAPPER] message.message_type: {getattr(message, "message_type", "NONE")}')
+                self._log('debug', '[WRAPPER] wrapper_callback called!')
+                self._log('debug', f'[WRAPPER] message type: {type(message).__name__}')
+                self._log('debug', f'[WRAPPER] message.version: {getattr(message, "version", "NONE")}')
+                self._log('debug', f'[WRAPPER] message.message_type: {getattr(message, "message_type", "NONE")}')
                 
                 try:
                     # Call the original callback with message only
                     self._log('debug', f'wrapper_callback called with message={type(message).__name__}')
                     
-                    self._log('info', f'[WRAPPER] About to call original callback')
+                    self._log('debug', f'[WRAPPER] About to call original callback')
                     result = callback(message)
-                    self._log('info', f'[WRAPPER] Original callback returned: {result} (type: {type(result)})')
+                    self._log('debug', f'[WRAPPER] Original callback returned: {result} (type: {type(result)})')
                     
                     self._log('debug', f'callback returned: {result}')
                     return result
@@ -211,7 +211,7 @@ class DjangoTransport(Transport):
             for header, value in response_headers.items():
                 response[header] = value
             
-            self._log('info', 'Sending non-general AuthMessage response', {
+            self._log('debug', 'Sending non-general AuthMessage response', {
                 'status': 200,
                 'responseHeaders': response_headers,
                 'messageType': message.messageType
@@ -289,12 +289,6 @@ class DjangoTransport(Transport):
                 except:
                     signature_array = []
             
-            # Debug logging
-            if signature_array:
-                print(f"[TRANSPORT DEBUG] Signature length: {len(signature_array)}, first byte: 0x{signature_array[0]:02x} ({signature_array[0]})")
-                if signature_array[0] != 48:  # 0x30
-                    print(f"[TRANSPORT ERROR] Signature does not start with 0x30! First byte: 0x{signature_array[0]:02x}")
-                    print(f"[TRANSPORT ERROR] First 10 bytes: {signature_array[:10]}")
             
             response_data: Dict[str, Any] = {
                 'status': 'success',
@@ -364,7 +358,7 @@ class DjangoTransport(Transport):
             if body:
                 response.content = bytes(body)
             
-            self._log('info', 'Sending general AuthMessage response', {
+            self._log('debug', 'Sending general AuthMessage response', {
                 'status': status_code,
                 'responseHeaders': response_headers,
                 'responseBodyLength': len(body) if body else 0,
@@ -575,23 +569,11 @@ class DjangoTransport(Transport):
                 return self._handle_well_known_auth(request, response, None)
             
             # Step 1: Extract BSV headers and convert to AuthMessage
-            print(f"[TRANSPORT._handle_request_via_peer] Converting HTTP to AuthMessage")
-            print(f"[TRANSPORT._handle_request_via_peer] Request path: {request.path}")
-            print(f"[TRANSPORT._handle_request_via_peer] Request method: {request.method}")
-            print(f"[TRANSPORT._handle_request_via_peer] Headers: {dict(request.headers)}")
             auth_message = self._convert_http_to_auth_message(request)
-            
+
             if not auth_message:
-                print(f"[TRANSPORT._handle_request_via_peer] No auth message, checking allowUnauthenticated")
                 # No BSV auth data - check allowUnauthenticated
                 return self._handle_unauthenticated_request(request, response)
-            
-            print(f"[TRANSPORT._handle_request_via_peer] AuthMessage created:")
-            print(f"  - version: {auth_message.version}")
-            print(f"  - message_type: {auth_message.message_type}")
-            print(f"  - identity_key: {str(auth_message.identity_key)[:40] if auth_message.identity_key else None}")
-            print(f"  - nonce: {auth_message.nonce[:40] if auth_message.nonce else None}")
-            print(f"  - your_nonce: {getattr(auth_message, 'your_nonce', None)[:40] if getattr(auth_message, 'your_nonce', None) else None}")
             
             self._log('debug', 'Converted HTTP to AuthMessage', {
                 'version': auth_message.version,
@@ -639,11 +621,8 @@ class DjangoTransport(Transport):
             # General Message: has x-bsv-auth-request-id header
             request_id = request.headers.get('x-bsv-auth-request-id')
             if request_id:
-                print(f"[TRANSPORT._handle_request_via_peer] Detected General Message with request_id: {request_id}")
                 self._log('debug', 'Detected General Message, delegating to _handle_general_message')
                 return self._handle_general_message(request, response, None)
-            else:
-                print(f"[TRANSPORT._handle_request_via_peer] Not a general message (no x-bsv-auth-request-id)")
             
             # Step 3b: Non-general message - delegate to py-sdk Peer
             self._log('debug', 'Delegating to py-sdk Peer.handle_incoming_message')
@@ -699,12 +678,9 @@ class DjangoTransport(Transport):
             identity_key_hex = request.headers.get('x-bsv-auth-identity-key', '')
             nonce = request.headers.get('x-bsv-auth-nonce', '')
             request_id = request.headers.get('x-bsv-auth-request-id', '')
-            
-            print(f"[DEBUG _convert_http_to_auth_message] version={version}, message_type={message_type}, identity_key={identity_key_hex[:20] if identity_key_hex else 'NONE'}..., nonce={nonce[:20] if nonce else 'NONE'}..., request_id={request_id[:20] if request_id else 'NONE'}...")
-            
+
             # Check if this is a BSV auth request - must have at least one BSV header
             if not any([version, message_type, identity_key_hex, nonce]):
-                print(f"[DEBUG _convert_http_to_auth_message] No BSV headers found, returning None")
                 return None
             
             # Set defaults only if BSV headers are present
@@ -715,10 +691,8 @@ class DjangoTransport(Transport):
                 # General messages have x-bsv-auth-request-id, initial requests don't
                 if request_id:
                     message_type = 'general'
-                    print(f"[TRANSPORT FIX] Detected general message (has request_id: {request_id[:20]}...)")
                 else:
                     message_type = 'initialRequest'
-                    print(f"[TRANSPORT FIX] Detected initial request (no request_id)")
             
             # Convert version for py-sdk compatibility
             if version == '1.0':
@@ -743,9 +717,6 @@ class DjangoTransport(Transport):
             if message_type == 'general':
                 # Build full BRC-104 payload for general messages
                 payload = self._build_general_message_payload(request)
-                print(f"[TRANSPORT FIX] Built general message payload: {len(payload)} bytes")
-                import hashlib
-                print(f"[TRANSPORT FIX] Payload digest: {hashlib.sha256(payload).hexdigest()}")
             elif request.body:
                 # For initialRequest, just use the body
                 payload = request.body
@@ -773,22 +744,15 @@ class DjangoTransport(Transport):
     ) -> Optional[HttpResponse]:
         """Convert py-sdk Peer processing result to HTTP response"""
         try:
-            print(f"[DEBUG] _convert_peer_result_to_http called")
             
             # Check if initial response was stored by _send_initial_response
             if hasattr(request, '_bsv_auth_response'):
-                print(f"[DEBUG] Found initial response in request context")
                 from django.http import JsonResponse
                 response_data = request._bsv_auth_response
-                self._log('debug', 'Returning initial response as JSON', {
-                    'messageType': response_data.get('messageType'),
-                    'nonce': response_data.get('nonce', '')[:20] + '...' if response_data.get('nonce') else ''
-                })
                 return JsonResponse(response_data)
             
             # py-sdk compliant: Check authentication status via Peer's session management
             identity_key = auth_message.identity_key
-            print(f"[DEBUG] identity_key: {identity_key.hex()[:20] if identity_key else None}")
             
             if identity_key and self.peer:
                 # Check if we have an authenticated session for this identity
@@ -970,14 +934,7 @@ class DjangoTransport(Transport):
         """
         try:
             # Build AuthMessage from request (Express: buildAuthMessageFromRequest)
-            print(f"[TRANSPORT._handle_general_message] Building AuthMessage from request")
-            print(f"[TRANSPORT._handle_general_message] Request ID: {request.headers.get('x-bsv-auth-request-id')}")
             auth_message = self._build_auth_message_from_request(request)
-            print(f"[TRANSPORT._handle_general_message] AuthMessage created:")
-            print(f"  - message_type: {getattr(auth_message, 'message_type', None)}")
-            print(f"  - nonce: {getattr(auth_message, 'nonce', None)}")
-            print(f"  - your_nonce: {getattr(auth_message, 'your_nonce', None)}")
-            print(f"  - identity_key: {str(getattr(auth_message, 'identity_key', None))[:40] if getattr(auth_message, 'identity_key', None) else None}")
             self._log('debug', 'Received general message with x-bsv-auth-request-id', {'message': str(auth_message)[:200]})
             
             # Set up general message listener (Express: peer.listenForGeneralMessages)
@@ -987,92 +944,44 @@ class DjangoTransport(Transport):
             # Trigger message processing SYNCHRONOUSLY
             # Peer will process the message, verify signature, and call the callback
             # The callback will set request.auth if authentication succeeds
-            print(f"[DEBUG transport] About to call peer.handle_incoming_message")
-            print(f"[DEBUG transport] auth_message: {auth_message}")
-            print(f"[DEBUG transport] request.auth before: {getattr(request, 'auth', 'NOT SET')}")
-            
             if self.peer:
                 try:
-                    self._log('debug', 'Calling peer.handle_incoming_message synchronously for general message')
-                    
-                    # デバッグ：AuthMessageの詳細を確認
-                    print(f"[DEBUG transport] === AUTH MESSAGE DETAILS ===")
-                    print(f"[DEBUG transport] Type: {type(auth_message)}")
-                    print(f"[DEBUG transport] version: {getattr(auth_message, 'version', 'NOT SET')}")
-                    print(f"[DEBUG transport] message_type: {getattr(auth_message, 'message_type', 'NOT SET')}")
-                    print(f"[DEBUG transport] identity_key: {getattr(auth_message, 'identity_key', 'NOT SET')}")
-                    print(f"[DEBUG transport] nonce: {getattr(auth_message, 'nonce', 'NOT SET')[:20] if hasattr(auth_message, 'nonce') else 'NOT SET'}")
-                    print(f"[DEBUG transport] signature: {getattr(auth_message, 'signature', 'NOT SET')[:20] if hasattr(auth_message, 'signature') else 'NOT SET'}")
-                    print(f"[DEBUG transport] payload: {type(getattr(auth_message, 'payload', None))}")
-                    print(f"[DEBUG transport] ===========================")
-                    
-                    # Check callback count before calling handle_incoming_message
-                    callback_count_before = len(self.peer.on_general_message_received_callbacks) if hasattr(self.peer, 'on_general_message_received_callbacks') else 0
-                    print(f"[DEBUG transport] Callback count before handle_incoming_message: {callback_count_before}")
-                    
                     # Call peer.handle_incoming_message directly - this will route to handle_general_message
                     # which will verify signature and call registered listeners
                     result = self.peer.handle_incoming_message(auth_message)
-                    
-                    # Check callback count after
-                    callback_count_after = len(self.peer.on_general_message_received_callbacks) if hasattr(self.peer, 'on_general_message_received_callbacks') else 0
-                    print(f"[DEBUG transport] Callback count after handle_incoming_message: {callback_count_after}")
-                    print(f"[DEBUG transport] peer.handle_incoming_message returned: {result} (type: {type(result)})")
-                    self._log('debug', 'peer.handle_incoming_message completed')
-                    print(f"[DEBUG transport] peer.handle_incoming_message completed successfully")
-                    
+
                     # If there was an error, return it
                     if result is not None:
-                        self._log('error', f'peer.handle_incoming_message returned error: {result}')
-                        print(f"[DEBUG transport] peer.handle_incoming_message returned error: {result}")
                         return JsonResponse({
                             'status': 'error',
                             'code': 'ERR_MESSAGE_PROCESSING_FAILED',
                             'description': str(result)
                         }, status=401)
                 except Exception as e:
-                    self._log('error', f'peer.handle_incoming_message failed: {e}')
                     import traceback
                     traceback.print_exc()
-                    print(f"[DEBUG transport] peer.handle_incoming_message FAILED: {e}")
                     return JsonResponse({
                         'status': 'error',
                         'code': 'ERR_MESSAGE_PROCESSING_FAILED',
                         'description': str(e)
                     }, status=500)
             
-            print(f"[DEBUG transport] request.auth after: {getattr(request, 'auth', 'NOT SET')}")
-            
-            # Debug: detailed request.auth inspection
-            if hasattr(request, 'auth'):
-                print(f"[DEBUG transport] request.auth exists: {request.auth}")
-                print(f"[DEBUG transport] request.auth.identity_key: {getattr(request.auth, 'identity_key', 'NO IDENTITY_KEY')}")
-                print(f"[DEBUG transport] request.auth.authenticated: {getattr(request.auth, 'authenticated', 'NO AUTHENTICATED')}")
-            else:
-                print(f"[DEBUG transport] request.auth does NOT exist")
-            
             # After message processing, check if authentication was successful
             if hasattr(request, 'auth') and request.auth.identity_key != 'unknown':
-                self._log('info', 'General message authenticated, continuing to view', {
+                self._log('debug', 'General message authenticated, continuing to view', {
                     'identityKey': request.auth.identity_key[:20] + '...'
                 })
-                print(f"[DEBUG transport] Authentication SUCCESS", flush=True)
-                import sys
-                sys.stdout.flush()
-                
+
                 # TypeScript compatibility: Check for payment header
                 payment_header = request.headers.get('X-BSV-Payment')
                 if payment_header:
-                    print(f"[DEBUG transport] Payment header detected, continuing to payment middleware")
                     return None  # Continue to payment middleware
                 else:
-                    print(f"[DEBUG transport] No payment header, checking if payment required")
                     # Let the view/payment middleware handle payment requirement
                     return None  # Continue to next middleware/view
             else:
                 # Authentication failed or not set
                 self._log('warn', 'General message authentication failed')
-                print(f"[DEBUG transport] Authentication FAILED, returning 401")
                 
                 # Build 401 response with BRC-104 headers for proper client handling
                 error_response = JsonResponse({
@@ -1174,7 +1083,7 @@ class DjangoTransport(Transport):
                     return
                 
                 # Express logic: certificates successfully received
-                self._log('info', 'Certificates successfully received from peer', {
+                self._log('debug', 'Certificates successfully received from peer', {
                     'senderPublicKey': sender_public_key,
                     'certCount': len(certificates),
                     'firstCertType': type(certificates[0]).__name__ if certificates else 'None'
@@ -1388,22 +1297,16 @@ class DjangoTransport(Transport):
                     sender_public_key: Verified sender's public key
                     payload: General message payload (contains HTTP request)
                 """
-                print(f"[DEBUG callback] General message callback CALLED!")
-                print(f"[DEBUG callback] sender_public_key: {sender_public_key}")
-                print(f"[DEBUG callback] payload length: {len(payload) if payload else 0}")
-                
                 try:
                     self._log('debug', 'General message callback triggered', {
                         'requestId': request_id,
                         'senderPublicKey': sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
                     })
-                    
+
                     # ✅ TypeScript版と同じ: req.auth = { identityKey: senderPublicKey }
                     from bsv_middleware.types import AuthInfo
                     identity_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
                     request.auth = AuthInfo(identity_key=identity_key_hex)
-                    
-                    print(f"[DEBUG callback] request.auth SET to: {identity_key_hex[:20]}...")
                     
                     # Extract HTTP request body from payload and replace request.body
                     # The payload contains: request_id (32 bytes) + method + path + search + headers + body
@@ -1456,30 +1359,25 @@ class DjangoTransport(Transport):
                                 # Update content type and length headers
                                 request.META['CONTENT_TYPE'] = 'application/json'
                                 request.META['CONTENT_LENGTH'] = str(len(extracted_body))
-                                print(f"[DEBUG callback] Extracted body from payload: {len(extracted_body)} bytes")
                                 self._log('debug', 'Extracted HTTP request body from payload', {
                                     'bodyLength': len(extracted_body)
                                 })
                         except Exception as e:
                             self._log('warn', f'Failed to extract body from payload: {e}')
-                            print(f"[DEBUG callback] Failed to extract body: {e}")
                     
-                    self._log('info', 'General message authenticated successfully', {
+                    self._log('debug', 'General message authenticated successfully', {
                         'identityKey': identity_key_hex[:20] + '...',
                         'requestId': request_id
                     })
                     
                 except Exception as e:
                     self._log('error', f'Error in general message callback: {e}')
-                    print(f"[DEBUG callback] ERROR: {e}")
                     import traceback
                     traceback.print_exc()
             
             # Register listener with py-sdk Peer (snake_case method name)
             if hasattr(self.peer, 'listen_for_general_messages'):
                 listener_id = self.peer.listen_for_general_messages(general_message_callback)
-                print(f"[DEBUG setup] Registered general message listener with ID: {listener_id}")
-                print(f"[DEBUG setup] Peer has {len(self.peer.on_general_message_received_callbacks)} registered callbacks")
                 self._log('debug', 'listen_for_general_messages registered', {'listenerId': listener_id})
                 return listener_id
             elif hasattr(self.peer, 'listenForGeneralMessages'):
@@ -1541,20 +1439,16 @@ class DjangoTransport(Transport):
             try:
                 request_id_bytes = base64.b64decode(request_id)
                 payload += request_id_bytes
-                print(f"[SERVER DEBUG] Request ID decoded: {len(request_id_bytes)} bytes")
             except Exception as e:
-                print(f"[SERVER DEBUG] Failed to decode request_id: {e}")
                 self._log('warn', f'Failed to decode request_id: {e}')
                 payload += b''  # Empty bytes if decode fails
         else:
-            print(f"[SERVER DEBUG] No request_id header found")
             payload += b''  # Empty bytes if no request_id
         
         # 2. Method
         method = request.method
         method_encoded = encode_string(method)
         payload += method_encoded
-        print(f"[SERVER DEBUG] Method '{method}' encoded: {len(method_encoded)} bytes")
         
         # 3. Parse URL into pathname and search
         # Build full URL from request
@@ -1564,30 +1458,23 @@ class DjangoTransport(Transport):
         full_url = f"{protocol}://{host}{full_path}"
         parsed = urlparse(full_url)
         
-        print(f"[SERVER DEBUG] Full URL: {full_url}")
-        print(f"[SERVER DEBUG] Pathname: {parsed.path}")
-        print(f"[SERVER DEBUG] Query: {parsed.query}")
         
         # Pathname
         if parsed.path:
             pathname_encoded = encode_string(parsed.path)
             payload += pathname_encoded
-            print(f"[SERVER DEBUG] Pathname encoded: {len(pathname_encoded)} bytes")
         else:
             pathname_encoded = encode_varint(-1)
             payload += pathname_encoded
-            print(f"[SERVER DEBUG] Pathname is empty, encoded: {len(pathname_encoded)} bytes")
-        
+
         # Search (query string with ?)
         if parsed.query:
             search_with_question = '?' + parsed.query
             search_encoded = encode_string(search_with_question)
             payload += search_encoded
-            print(f"[SERVER DEBUG] Search encoded: {len(search_encoded)} bytes")
         else:
             search_encoded = encode_varint(-1)
             payload += search_encoded
-            print(f"[SERVER DEBUG] Search is empty, encoded: {len(search_encoded)} bytes")
         
         # 4. Headers (filtered and sorted)
         # Include only headers that match TypeScript logic:
@@ -1610,16 +1497,11 @@ class DjangoTransport(Transport):
         
         headers_count = len(filtered_headers)
         payload += encode_varint(headers_count)
-        print(f"[SERVER DEBUG] Filtered headers count: {headers_count}")
-        headers_total_bytes = 0
         for key, value in filtered_headers:
             key_encoded = encode_string(key)
             value_encoded = encode_string(value)
             payload += key_encoded
             payload += value_encoded
-            headers_total_bytes += len(key_encoded) + len(value_encoded)
-            print(f"[SERVER DEBUG] Header: {key}={value[:50]}... ({len(key_encoded) + len(value_encoded)} bytes)")
-        print(f"[SERVER DEBUG] Headers total: {headers_total_bytes} bytes")
         
         # 5. Body
         body = request.body if hasattr(request, 'body') else b''
@@ -1627,13 +1509,10 @@ class DjangoTransport(Transport):
             body_encoded_len = encode_varint(len(body))
             payload += body_encoded_len
             payload += body
-            print(f"[SERVER DEBUG] Body: {len(body)} bytes (encoded length: {len(body_encoded_len)} bytes)")
         else:
             body_encoded = encode_varint(-1)
             payload += body_encoded
-            print(f"[SERVER DEBUG] Body is empty (encoded: {len(body_encoded)} bytes)")
         
-        print(f"[SERVER DEBUG] Total payload size: {len(payload)} bytes")
         return payload
     
     def _build_auth_message_from_request(self, request: HttpRequest) -> Any:
@@ -1671,20 +1550,13 @@ class DjangoTransport(Transport):
                 # Build full BRC-104 payload structure
                 payload = self._build_general_message_payload(request)
                 message_data['payload'] = payload
-                print(f"[SERVER DEBUG] Built full BRC-104 payload: {len(payload)} bytes")
                 # Debug: log payload digest for comparison with client (force print for debugging)
                 try:
                     import hashlib
                     payload_digest = hashlib.sha256(payload).digest()
-                    print(f"[SERVER DEBUG] Payload digest: {payload_digest.hex()[:64]}")
-                    print(f"[SERVER DEBUG] Payload length: {len(payload)} bytes")
-                    print(f"[SERVER DEBUG] Request ID: {request.headers.get('x-bsv-auth-request-id', 'N/A')[:30]}...")
-                    print(f"[SERVER DEBUG] Method: {request.method}, Path: {request.path}")
-                    print(f"[SERVER DEBUG] Full URL: {request.build_absolute_uri()}")
-                    self._log('info', f'[SERVER] Payload digest: {payload_digest.hex()[:64]}')
-                    self._log('info', f'[SERVER] Payload length: {len(payload)} bytes')
+                    self._log('debug', f'[SERVER] Payload digest: {payload_digest.hex()[:64]}')
+                    self._log('debug', f'[SERVER] Payload length: {len(payload)} bytes')
                 except Exception as e:
-                    print(f"[SERVER DEBUG] Failed to log payload digest: {e}")
                     self._log('warn', f'Failed to log payload digest: {e}')
             else:
                 # For non-general messages, use empty payload
@@ -1692,17 +1564,14 @@ class DjangoTransport(Transport):
             
             # Convert signature from hex to bytes
             signature_raw = message_data['signature']
-            print(f"[SERVER DEBUG] Raw signature from header: {signature_raw[:40] if signature_raw else 'EMPTY'}...")
             if signature_raw:
                 try:
                     signature_bytes = bytes.fromhex(signature_raw)
                     message_data['signature'] = signature_bytes
-                    print(f"[SERVER DEBUG] Parsed signature length: {len(signature_bytes)} bytes")
                 except Exception as e:
                     self._log('warn', f'Failed to parse signature hex: {e}')
-                    print(f"[SERVER DEBUG] Failed to parse signature: {e}")
             else:
-                print(f"[SERVER DEBUG] No signature in header!")
+                pass
             
             self._log('debug', 'Built AuthMessage from request', {
                 'messageType': message_data['messageType'],
@@ -1968,7 +1837,7 @@ class DjangoTransport(Transport):
                     # For now, just log
                     return
                 
-                self._log('info', 'Certificates received from peer', {
+                self._log('debug', 'Certificates received from peer', {
                     'sender': sender_public_key[:20],
                     'cert_count': len(certificates)
                 })

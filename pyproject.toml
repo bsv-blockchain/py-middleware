@@ -46,7 +46,7 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "bsv-sdk @ git+https://github.com/bsv-blockchain/py-sdk.git@develop-port",
+    "bsv-sdk",
     "django>=3.2.0,<5.0.0",
     "pydantic>=1.8.0,<3.0.0",
     "typing-extensions>=4.0.0",
