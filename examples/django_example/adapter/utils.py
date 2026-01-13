@@ -289,23 +289,23 @@ def create_bsv_response(data: Dict[str, Any], request: HttpRequest) -> JsonRespo
 
 def get_multipart_data(request: HttpRequest) -> Dict[str, Any]:
     """
-    BSV認証後にmultipart/form-dataを安全に解析
-    
+    Safely parse multipart/form-data after BSV authentication
+
     Args:
         request: Django HTTP request (BSV authentication already processed)
-    
+
     Returns:
         dict: {
-            'fields': {...},  # フォームフィールド
-            'files': {...}    # アップロードファイル
+            'fields': {...},  # Form fields
+            'files': {...}    # Uploaded files
         }
     """
     if not request.META.get('CONTENT_TYPE', '').startswith('multipart/form-data'):
         return {'fields': {}, 'files': {}}
     
     try:
-        # BSV処理後にDjangoの標準パーサーを使用
-        # 注意: BSV署名検証は既に完了済みなので、ここで安全に解析可能
+        # Use Django's standard parser after BSV processing
+        # Note: BSV signature verification is already complete, so parsing is safe here
         parser = MultiPartParser(
             request.META, 
             request, 
@@ -327,36 +327,36 @@ def get_multipart_data(request: HttpRequest) -> Dict[str, Any]:
 
 
 def is_multipart_request(request: HttpRequest) -> bool:
-    """multipart/form-dataリクエストかチェック"""
+    """Check if multipart/form-data request"""
     result: bool = request.META.get('CONTENT_TYPE', '').startswith('multipart/form-data')
     return result
 
 
 def is_text_plain_request(request: HttpRequest) -> bool:
-    """text/plainリクエストかチェック"""
+    """Check if text/plain request"""
     content_type = request.META.get('CONTENT_TYPE', '').lower().strip()
     return content_type == 'text/plain' or content_type.startswith('text/plain;')
 
 
 def get_text_content(request: HttpRequest, encoding: str = 'utf-8') -> str:
     """
-    text/plainリクエストからテキストコンテンツを取得
-    
+    Get text content from text/plain request
+
     Args:
         request: Django HTTP request (text/plain content-type)
-        encoding: テキストエンコーディング (default: utf-8)
-    
+        encoding: Text encoding (default: utf-8)
+
     Returns:
-        str: デコードされたテキストコンテンツ
-        
+        str: Decoded text content
+
     Raises:
-        ValueError: text/plainでない、またはデコードに失敗した場合
+        ValueError: If not text/plain or decoding fails
     """
     if not is_text_plain_request(request):
         raise ValueError('Request is not text/plain content type')
     
     try:
-        # raw body をテキストとしてデコード
+        # Decode raw body as text
         text_content = request.body.decode(encoding)
         
         logger.debug(f"Decoded text/plain content: {len(text_content)} characters")
@@ -369,17 +369,17 @@ def get_text_content(request: HttpRequest, encoding: str = 'utf-8') -> str:
 
 def get_content_by_type(request: HttpRequest) -> Dict[str, Any]:
     """
-    Content-Typeに応じてリクエストコンテンツを解析 (Express writeBodyToWriter 相当)
-    
+    Parse request content based on Content-Type (Express writeBodyToWriter equivalent)
+
     Args:
         request: Django HTTP request
-        
+
     Returns:
         dict: {
             'content_type': str,
-            'data': Any,  # 解析されたデータ
+            'data': Any,  # Parsed data
             'encoding': str,
-            'processed_body': bytes  # BSVプロトコル用の処理済みボディ
+            'processed_body': bytes  # Processed body for BSV protocol
         }
     """
     content_type = request.META.get('CONTENT_TYPE', '').lower().strip()
@@ -392,14 +392,14 @@ def get_content_by_type(request: HttpRequest) -> Dict[str, Any]:
                 'content_type': 'multipart/form-data',
                 'data': multipart_data,
                 'encoding': 'multipart',
-                'processed_body': request.body  # 生データを保持
+                'processed_body': request.body  # Preserve raw data
             }
             
         elif content_type == 'application/json' or content_type.startswith('application/json;'):
             # JSON - Express equivalent: JSON.stringify(body)
             import json
             data = json.loads(request.body.decode('utf-8'))
-            # JSONをstring化してからUTF-8エンコード (Express互換)
+            # Stringify JSON then UTF-8 encode (Express compatible)
             processed_json = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
             return {
                 'content_type': 'application/json',
@@ -415,14 +415,14 @@ def get_content_by_type(request: HttpRequest) -> Dict[str, Any]:
                 'content_type': 'text/plain',
                 'data': text_content,
                 'encoding': 'utf-8',
-                'processed_body': text_content.encode('utf-8')  # Express互換: UTF-8 bytes
+                'processed_body': text_content.encode('utf-8')  # Express compatible: UTF-8 bytes
             }
             
         elif content_type == 'application/x-www-form-urlencoded' or content_type.startswith('application/x-www-form-urlencoded;'):
             # URL-encoded form - Express equivalent: new URLSearchParams(body).toString()
             from urllib.parse import parse_qs, urlencode
             form_data = parse_qs(request.body.decode('utf-8'))
-            # フォームデータを再エンコード (Express互換)
+            # Re-encode form data (Express compatible)
             processed_form = urlencode(form_data, doseq=True)
             return {
                 'content_type': 'application/x-www-form-urlencoded',
@@ -453,11 +453,11 @@ def get_content_by_type(request: HttpRequest) -> Dict[str, Any]:
 
 def get_uploaded_files(request: HttpRequest) -> Dict[str, UploadedFile]:
     """
-    BSV認証済みリクエストからアップロードされたファイルを取得
-    
+    Get uploaded files from BSV authenticated request
+
     Args:
         request: Django HTTP request (BSV authenticated)
-        
+
     Returns:
         dict: filename -> UploadedFile mapping
     """
@@ -474,11 +474,11 @@ def get_uploaded_files(request: HttpRequest) -> Dict[str, UploadedFile]:
 
 def get_multipart_fields(request: HttpRequest) -> Dict[str, Any]:
     """
-    BSV認証済みリクエストからフォームフィールドを取得
-    
+    Get form fields from BSV authenticated request
+
     Args:
         request: Django HTTP request (BSV authenticated)
-        
+
     Returns:
         dict: field_name -> field_value mapping
     """
@@ -497,9 +497,9 @@ def get_multipart_fields(request: HttpRequest) -> Dict[str, Any]:
 
 def handle_file_upload(func: Callable[..., Any]) -> Callable[..., Any]:
     """
-    ファイルアップロード対応デコレータ
-    BSV認証 + multipart/form-data処理
-    
+    File upload handling decorator
+    BSV authentication + multipart/form-data processing
+
     Usage:
         @handle_file_upload
         def upload_view(request):
@@ -508,10 +508,10 @@ def handle_file_upload(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     @wraps(func)
     def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
-        # BSV認証は既にミドルウェアで処理済み
-        
+        # BSV authentication is already processed by middleware
+
         if is_multipart_request(request):
-            # multipart データを解析してrequestに追加
+            # Parse multipart data and add to request
             multipart_data = get_multipart_data(request)
             request.multipart_fields = multipart_data['fields']
             request.multipart_files = multipart_data['files']
@@ -525,8 +525,8 @@ def handle_file_upload(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def bsv_file_upload_required(func: Callable[..., Any]) -> Callable[..., Any]:
     """
-    BSV認証 + ファイルアップロード必須デコレータ
-    
+    BSV authentication + file upload required decorator
+
     Usage:
         @bsv_file_upload_required
         def secure_upload_view(request):
@@ -536,15 +536,15 @@ def bsv_file_upload_required(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     @wraps(func)
     def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
-        # BSV認証チェック
+        # BSV authentication check
         if not is_authenticated_request(request):
             return JsonResponse({'error': 'BSV authentication required'}, status=401)
-        
-        # ファイルアップロードチェック
+
+        # File upload check
         if not is_multipart_request(request):
             return JsonResponse({'error': 'File upload required (multipart/form-data)'}, status=400)
-        
-        # multipart データを処理
+
+        # Process multipart data
         multipart_data = get_multipart_data(request)
         if not multipart_data['files']:
             return JsonResponse({'error': 'No files uploaded'}, status=400)

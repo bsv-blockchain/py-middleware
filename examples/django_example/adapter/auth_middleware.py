@@ -111,18 +111,18 @@ class BSVAuthMiddleware(MiddlewareMixin):
             )
             
             # Session manager will be created per request (Django sessions are request-based)
-            
-            # 🎯 実際の Peer インスタンス作成 (Express 同等)
+
+            # 🎯 Actual Peer instance creation (Express equivalent)
             try:
-                # wallet を py-sdk 互換形式にアダプト
+                # Adapt wallet to py-sdk compatible format
                 from bsv_middleware.wallet_adapter import create_wallet_adapter
                 adapted_wallet = create_wallet_adapter(self.wallet)
-                
-                # session manager を作成 (DefaultSessionManager使用)
+
+                # Create session manager (using DefaultSessionManager)
                 from bsv.auth.session_manager import DefaultSessionManager
                 session_mgr = DefaultSessionManager()
-                
-                # Peer インスタンス作成 (Express new Peer() 同等)
+
+                # Peer instance creation (Express new Peer() equivalent)
                 from bsv.auth.peer import Peer, PeerOptions
                 
                 # Debug: Verify adapter type before passing to Peer
@@ -147,7 +147,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 
             except Exception as e:
                 logger.error(f"❌ py-sdk Peer integration failed: {e}")
-                # エラーの詳細を記録
+                # Record error details
                 self._log_integration_error(e)
                 raise BSVServerMisconfiguredException(
                     f"py-sdk Peer integration failed: {str(e)}"
@@ -500,7 +500,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
             return ''
     
     def _log_integration_error(self, error: Exception) -> None:
-        """統合エラーの詳細をログ記録"""
+        """Log integration error details"""
         import traceback
         from datetime import datetime
         
@@ -514,8 +514,8 @@ class BSVAuthMiddleware(MiddlewareMixin):
         }
         
         logger.error(f"py-sdk integration error details: {error_details}")
-        
-        # ファイルにも記録 (デバッグ用)
+
+        # Also record to file (for debugging)
         try:
             import json
             from pathlib import Path

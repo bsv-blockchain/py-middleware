@@ -162,7 +162,7 @@ Line 3 with unicode: café"""
         
         test_cases = [
             "Simple text",
-            "Text with unicode: 日本語 🎌",
+            "Text with unicode: Hello 世界 🌍",
             "Multi\nline\ntext",
             "Text with special chars: !@#$%^&*()",
             ""  # Empty string

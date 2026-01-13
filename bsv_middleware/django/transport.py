@@ -1303,7 +1303,7 @@ class DjangoTransport(Transport):
                         'senderPublicKey': sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
                     })
 
-                    # ✅ TypeScript版と同じ: req.auth = { identityKey: senderPublicKey }
+                    # ✅ Same as TypeScript version: req.auth = { identityKey: senderPublicKey }
                     from bsv_middleware.types import AuthInfo
                     identity_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
                     request.auth = AuthInfo(identity_key=identity_key_hex)
@@ -1707,57 +1707,57 @@ class DjangoTransport(Transport):
     
     def _get_request_body_for_bsv_protocol(self, request: HttpRequest) -> bytes:
         """
-        BSVプロトコル用にリクエストボディを取得
-        multipart/form-dataも含めて統一的にバイナリ処理
-        
+        Get request body for BSV protocol
+        Uniform binary processing including multipart/form-data
+
         Args:
             request: Django HTTP request
-            
+
         Returns:
-            bytes: BSV署名検証用の生リクエストボディ
+            bytes: Raw request body for BSV signature verification
         """
         content_type = request.META.get('CONTENT_TYPE', '')
         
         if request.body:
-            # すべてのContent-Typeをバイナリとして処理（Go方式）
-            # BSV署名検証では生のバイナリデータが必要
+            # Process all Content-Type as binary (Go style)
+            # Raw binary data is needed for BSV signature verification
             self._log('debug', f'Processing body for BSV protocol', {
                 'content_type': content_type,
                 'body_length': len(request.body)
             })
             return request.body
         else:
-            # 空のリクエスト
+            # Empty request
             self._log('debug', 'Empty request body for BSV protocol')
             return b''
     
     def _should_preserve_raw_body(self, request: HttpRequest) -> bool:
         """
-        BSV署名検証のため、生のリクエストボディを保持すべきかチェック
-        
+        Check if raw request body should be preserved for BSV signature verification
+
         Args:
             request: Django HTTP request
-            
+
         Returns:
             bool: True if raw body should be preserved
         """
         content_type = request.META.get('CONTENT_TYPE', '')
-        
-        # multipart/form-dataも含めて、BSVプロトコルでは全て生データとして扱う
-        # Express and Go実装と同じアプローチ
+
+        # Including multipart/form-data, BSV protocol treats everything as raw data
+        # Same approach as Express and Go implementations
         self._log('debug', f'Checking raw body preservation', {
             'content_type': content_type,
             'preserve': True
         })
-        return True  # BSVミドルウェアでは常に生データを保持
+        return True  # BSV middleware always preserves raw data
     
     def _is_multipart_request(self, request: HttpRequest) -> bool:
         """
-        multipart/form-dataリクエストかチェック
-        
+        Check if multipart/form-data request
+
         Args:
             request: Django HTTP request
-            
+
         Returns:
             bool: True if multipart/form-data request
         """
