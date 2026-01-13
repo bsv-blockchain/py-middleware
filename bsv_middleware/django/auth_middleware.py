@@ -125,10 +125,6 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 # Peer インスタンス作成 (Express new Peer() 同等)
                 from bsv.auth.peer import Peer, PeerOptions
                 
-                # Debug: Verify adapter type before passing to Peer
-                logger.info(f"[AUTH MIDDLEWARE DEBUG] adapted_wallet type: {type(adapted_wallet)}")
-                logger.info(f"[AUTH MIDDLEWARE DEBUG] adapted_wallet methods: {[m for m in dir(adapted_wallet) if 'verify' in m]}")
-                
                 peer_options = PeerOptions(
                     wallet=adapted_wallet,
                     transport=self.transport,
@@ -162,7 +158,6 @@ class BSVAuthMiddleware(MiddlewareMixin):
             )
     
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        print(f"[AUTH MIDDLEWARE] Processing request: {request.path}")
         """
         Main middleware entry point.
 
@@ -291,21 +286,21 @@ class BSVAuthMiddleware(MiddlewareMixin):
             has_version = request.headers.get('x-bsv-auth-version')
             
             debug_msg = f"[AUTH MIDDLEWARE process_response] has_auth={has_auth}, identity_key={identity_key[:20] if identity_key else None}..., has_version={has_version}, status={response.status_code}"
-            logger.warning(debug_msg)  # Use warning level to ensure visibility
-            
+            logger.debug(debug_msg)
+
             # Check if this request has x-bsv-auth headers (general message)
             if not request.headers.get('x-bsv-auth-version'):
-                logger.warning(f"[AUTH MIDDLEWARE process_response] No x-bsv-auth-version header, skipping")
+                logger.debug(f"[AUTH MIDDLEWARE process_response] No x-bsv-auth-version header, skipping")
                 return response
-            
+
             # Check if this is an authenticated request with general message
             if not hasattr(request, 'auth') or request.auth.identity_key == 'unknown':
-                logger.warning(f"[AUTH MIDDLEWARE process_response] Not authenticated (has_auth={has_auth}, identity_key={identity_key}), skipping")
+                logger.debug(f"[AUTH MIDDLEWARE process_response] Not authenticated (has_auth={has_auth}, identity_key={identity_key}), skipping")
                 return response
-            
+
             # Add auth headers to ALL authenticated responses
             # The client ALWAYS expects auth headers on responses, even for authenticated sessions
-            logger.warning(f"[AUTH MIDDLEWARE process_response] Adding auth headers to authenticated response")
+            logger.debug(f"[AUTH MIDDLEWARE process_response] Adding auth headers to authenticated response")
             response = self._add_auth_response_headers(request, response)
             
             return response
@@ -334,16 +329,16 @@ class BSVAuthMiddleware(MiddlewareMixin):
         import base64
         import os
         
-        logger.warning(f"[_add_auth_response_headers] START - adding auth headers to response")
-        
+        logger.debug(f"[_add_auth_response_headers] START - adding auth headers to response")
+
         try:
             # Get request ID and nonces from incoming request
             request_id = request.headers.get('x-bsv-auth-request-id', '')
             client_request_nonce = request.headers.get('x-bsv-auth-nonce', '')  # Client's fresh request nonce
             client_identity_key = request.headers.get('x-bsv-auth-identity-key', '')
-            
-            logger.warning(f"[_add_auth_response_headers] client_request_nonce: {client_request_nonce[:20]}...")
-            
+
+            logger.debug(f"[_add_auth_response_headers] client_request_nonce: {client_request_nonce[:20]}...")
+
             # Generate server nonce for this response
             # CRITICAL: TypeScript Peer.processGeneralMessage (line 822) only verifies message.yourNonce (the echoed client nonce)
             # The server's own nonce (message.nonce) is NOT verified by the client!
@@ -352,7 +347,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
             import base64
             import os
             server_nonce = base64.b64encode(os.urandom(32)).decode('utf-8')
-            logger.warning(f"[_add_auth_response_headers] Generated random nonce (no HMAC): {server_nonce[:40]}...")
+            logger.debug(f"[_add_auth_response_headers] Generated random nonce (no HMAC): {server_nonce[:40]}...")
             
             # Get server's identity key
             from bsv_middleware.wallet_adapter import create_wallet_adapter
@@ -387,25 +382,25 @@ class BSVAuthMiddleware(MiddlewareMixin):
             )
             
             # Add auth headers to response
-            logger.warning(f"[_add_auth_response_headers] Setting response headers...")
+            logger.debug(f"[_add_auth_response_headers] Setting response headers...")
             response['x-bsv-auth-version'] = '0.1'
             response['x-bsv-auth-message-type'] = 'general'
             response['x-bsv-auth-identity-key'] = server_identity_key
             response['x-bsv-auth-nonce'] = server_nonce
             # CRITICAL: Echo back the CLIENT's session nonce (from initial handshake)!
-            # The client will verify this with verifyNonce(yourNonce, wallet, 'self'), 
+            # The client will verify this with verifyNonce(yourNonce, wallet, 'self'),
             # so it MUST be the client's own nonce that they created with counterparty='self'!
             response['x-bsv-auth-your-nonce'] = client_session_nonce  # CLIENT's session nonce from handshake!
             response['x-bsv-auth-signature'] = signature
             response['x-bsv-auth-request-id'] = request_id
-            
-            logger.warning(f"[_add_auth_response_headers] Setting x-bsv-auth-your-nonce to CLIENT's session nonce: {client_session_nonce[:40] if client_session_nonce else 'NONE'}...")
-            logger.warning(f"[_add_auth_response_headers] response['x-bsv-auth-your-nonce'] = {response.get('x-bsv-auth-your-nonce', 'NOT SET')[:40] if response.get('x-bsv-auth-your-nonce') else 'NOT SET'}...")
-            logger.warning(f"[_add_auth_response_headers] Headers set! Checking response object...")
-            logger.warning(f"[_add_auth_response_headers] response['x-bsv-auth-version'] = {response.get('x-bsv-auth-version')}")
-            logger.warning(f"[_add_auth_response_headers] response['x-bsv-auth-signature'] = {response.get('x-bsv-auth-signature', 'MISSING')[:40]}...")
-            
-            logger.warning(f"[_add_auth_response_headers] SUCCESS - Added auth headers: nonce={server_nonce[:20]}..., identity={server_identity_key[:20]}..., signature={signature[:40]}...")
+
+            logger.debug(f"[_add_auth_response_headers] Setting x-bsv-auth-your-nonce to CLIENT's session nonce: {client_session_nonce[:40] if client_session_nonce else 'NONE'}...")
+            logger.debug(f"[_add_auth_response_headers] response['x-bsv-auth-your-nonce'] = {response.get('x-bsv-auth-your-nonce', 'NOT SET')[:40] if response.get('x-bsv-auth-your-nonce') else 'NOT SET'}...")
+            logger.debug(f"[_add_auth_response_headers] Headers set! Checking response object...")
+            logger.debug(f"[_add_auth_response_headers] response['x-bsv-auth-version'] = {response.get('x-bsv-auth-version')}")
+            logger.debug(f"[_add_auth_response_headers] response['x-bsv-auth-signature'] = {response.get('x-bsv-auth-signature', 'MISSING')[:40]}...")
+
+            logger.debug(f"[_add_auth_response_headers] SUCCESS - Added auth headers: nonce={server_nonce[:20]}..., identity={server_identity_key[:20]}..., signature={signature[:40]}...")
             
             return response
             
