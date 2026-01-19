@@ -97,9 +97,7 @@ class TestIssue5RuntimeCheckable:
             ) -> Dict:
                 return {"signature": []}
 
-            def create_action(
-                self, args: Dict[str, Any], originator: Optional[str] = None
-            ) -> Dict:
+            def create_action(self, args: Dict[str, Any], originator: Optional[str] = None) -> Dict:
                 return {}
 
             def internalize_action(

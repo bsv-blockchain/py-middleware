@@ -62,9 +62,7 @@ class BSVPaymentFlowTester:
                 return b"payment_test_signature_" + message[:10]
 
             def get_public_key(self) -> str:
-                return (
-                    "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"
-                )
+                return "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"
 
             def internalize_action(self, action: dict) -> dict:
                 """Process payment action with actual amount validation"""
@@ -129,9 +127,7 @@ class BSVPaymentFlowTester:
 
         # Generate derivation prefix in the same format as middleware expects
         derivation_prefix = (
-            f"{endpoint}:{identity_key[:20]}..."
-            if identity_key != "unknown"
-            else endpoint
+            f"{endpoint}:{identity_key[:20]}..." if identity_key != "unknown" else endpoint
         )
 
         return json.dumps(
@@ -322,19 +318,13 @@ class BSVPaymentFlowTester:
             }
 
             # Additional validation for payment processing
-            if (
-                scenario.should_process_payment
-                and not payment_processed
-                and status_code == 200
-            ):
+            if scenario.should_process_payment and not payment_processed and status_code == 200:
                 result["success"] = False
                 result["error"] = "Payment should have been processed but was not"
 
             # Log result
             status = "✅ PASS" if result["success"] else "❌ FAIL"
-            print(
-                f"   {status} Status: {status_code} (expected {scenario.expected_status})"
-            )
+            print(f"   {status} Status: {status_code} (expected {scenario.expected_status})")
             print(
                 f"   Payment processed: {payment_processed} (expected: {scenario.should_process_payment})"
             )
@@ -411,17 +401,13 @@ class BSVPaymentFlowTester:
 
         # Summary
         total_tests = len(self.test_results)
-        passed_tests = sum(
-            1 for result in self.test_results if result.get("success", False)
-        )
+        passed_tests = sum(1 for result in self.test_results if result.get("success", False))
         pass_rate = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
 
         # Calculation test summary
         calc_total = len(calculation_results.get("calculation_tests", []))
         calc_passed = sum(
-            1
-            for t in calculation_results.get("calculation_tests", [])
-            if t.get("success", False)
+            1 for t in calculation_results.get("calculation_tests", []) if t.get("success", False)
         )
 
         summary = {
@@ -433,9 +419,7 @@ class BSVPaymentFlowTester:
                 "test_results": self.test_results,
             },
             "calculation_tests": calculation_results,
-            "wallet_state": {
-                "processed_payments": self.mock_wallet.get_processed_payments()
-            },
+            "wallet_state": {"processed_payments": self.mock_wallet.get_processed_payments()},
         }
 
         print("\n" + "=" * 60)
@@ -443,9 +427,7 @@ class BSVPaymentFlowTester:
             f"📊 Payment Flow Summary: {passed_tests}/{total_tests} tests passed ({pass_rate:.1f}%)"
         )
         print(f"💲 Price Calculation: {calc_passed}/{calc_total} tests passed")
-        print(
-            f"🏦 Wallet processed {len(self.mock_wallet.get_processed_payments())} payments"
-        )
+        print(f"🏦 Wallet processed {len(self.mock_wallet.get_processed_payments())} payments")
 
         return summary
 
@@ -460,9 +442,7 @@ if __name__ == "__main__":
         if result.get("success", False):
             print(f"   ✅ {result['scenario_name']}")
         else:
-            print(
-                f"   ❌ {result['scenario_name']}: {result.get('error', 'Test failed')}"
-            )
+            print(f"   ❌ {result['scenario_name']}: {result.get('error', 'Test failed')}")
 
     print("\n🏦 Processed Payments:")
     for i, payment in enumerate(results["wallet_state"]["processed_payments"]):

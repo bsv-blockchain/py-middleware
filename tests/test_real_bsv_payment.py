@@ -32,7 +32,6 @@ from bsv_middleware.py_sdk_bridge import create_nonce, verify_nonce
 # py-sdk imports
 try:
     from bsv.keys import PrivateKey
-    from bsv.transaction import Transaction
 
     py_sdk_available = True
 except ImportError as e:
@@ -57,9 +56,7 @@ class RealBSVPaymentTester:
 
         # Test private key (for creating real transactions)
         if py_sdk_available:
-            self.private_key = PrivateKey(
-                "L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9"
-            )
+            self.private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
             self.public_key = self.private_key.public_key()
             self.identity_key = self.public_key.hex()
 
@@ -110,12 +107,8 @@ class RealBSVPaymentTester:
                 if outputs:
                     output = outputs[0]
                     remittance = output.get("paymentRemittance", {})
-                    print(
-                        f"   derivationPrefix: {remittance.get('derivationPrefix', '')[:20]}..."
-                    )
-                    print(
-                        f"   derivationSuffix: {remittance.get('derivationSuffix', '')[:20]}..."
-                    )
+                    print(f"   derivationPrefix: {remittance.get('derivationPrefix', '')[:20]}...")
+                    print(f"   derivationSuffix: {remittance.get('derivationSuffix', '')[:20]}...")
                     print(f"   protocol: {output.get('protocol')}")
 
                 # Mock: Always accept payment
@@ -199,15 +192,11 @@ class RealBSVPaymentTester:
             payment_data = {
                 "derivationPrefix": "test_prefix_12345",
                 "derivationSuffix": "test_suffix_67890",
-                "transaction": base64.b64encode(b"mock_transaction_data").decode(
-                    "utf-8"
-                ),
+                "transaction": base64.b64encode(b"mock_transaction_data").decode("utf-8"),
             }
 
             # Create request with payment header
-            request = self.factory.post(
-                "/api/paid-endpoint", content_type="application/json"
-            )
+            request = self.factory.post("/api/paid-endpoint", content_type="application/json")
 
             # Set payment header (Express: req.headers['x-bsv-payment'])
             payment_header = json.dumps(payment_data)
@@ -224,9 +213,7 @@ class RealBSVPaymentTester:
             print("✅ Payment header parsed successfully")
 
             # Verify nonce (Express: lines 79-90)
-            is_valid_nonce = verify_nonce(
-                parsed_payment["derivationPrefix"], self.mock_wallet
-            )
+            is_valid_nonce = verify_nonce(parsed_payment["derivationPrefix"], self.mock_wallet)
 
             if is_valid_nonce:
                 print("✅ Nonce verification passed")
@@ -257,9 +244,7 @@ class RealBSVPaymentTester:
             payment_data = {
                 "derivationPrefix": "test_prefix_12345",
                 "derivationSuffix": "test_suffix_67890",
-                "transaction": base64.b64encode(b"mock_beef_transaction").decode(
-                    "utf-8"
-                ),
+                "transaction": base64.b64encode(b"mock_beef_transaction").decode("utf-8"),
             }
 
             # Mock authenticated identity
@@ -274,9 +259,7 @@ class RealBSVPaymentTester:
 
             # Prepare internalize action args (Express: lines 100-112)
             action_args = {
-                "tx": base64.b64decode(
-                    payment_data["transaction"]
-                ),  # Convert base64 to bytes
+                "tx": base64.b64decode(payment_data["transaction"]),  # Convert base64 to bytes
                 "outputs": [
                     {
                         "paymentRemittance": {
@@ -387,10 +370,6 @@ class RealBSVPaymentTester:
 
             # Step 3: Check if payment required (Express: lines 53-57)
             print("\n📋 Step 3: Check if payment required")
-            if request_price == 0:
-                print("✅ No payment required (price = 0)")
-                return True
-
             print(f"💳 Payment required: {request_price} satoshis")
 
             # Step 4: Check for payment header (Express: lines 59-74)

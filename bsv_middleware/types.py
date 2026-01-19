@@ -128,9 +128,7 @@ class SessionManagerInterface(Protocol):
 
 
 # Type aliases for callbacks
-CertificatesReceivedCallback = Callable[
-    [str, List[Any], HttpRequest, HttpResponse], None
-]
+CertificatesReceivedCallback = Callable[[str, List[Any], HttpRequest, HttpResponse], None]
 
 CalculateRequestPriceCallback = Callable[[HttpRequest], Union[int, float]]
 

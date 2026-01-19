@@ -29,7 +29,7 @@ from django.test import RequestFactory
 try:
     from bsv.auth.auth_message import AuthMessage
     from bsv.auth.verifiable_certificate import VerifiableCertificate
-    from bsv.keys import PrivateKey, PublicKey, verify_signed_text
+    from bsv.keys import PrivateKey, verify_signed_text
     from bsv.signed_message import SignedMessage
 
     py_sdk_available = True
@@ -46,9 +46,7 @@ class RealBSVAuthTester:
 
         if py_sdk_available:
             # Create real BSV private key for testing
-            self.private_key = PrivateKey(
-                "L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9"
-            )
+            self.private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
             self.public_key = self.private_key.public_key()
             self.identity_key = self.public_key.hex()
 
@@ -231,21 +229,15 @@ class RealBSVAuthTester:
 
             verification_result = SignedMessage.verify(message_bytes, signature_bytes)
 
-            print(
-                f"🔍 Verification Result: {'✅ VALID' if verification_result else '❌ INVALID'}"
-            )
+            print(f"🔍 Verification Result: {'✅ VALID' if verification_result else '❌ INVALID'}")
 
             # Try text signature verification as well
             try:
                 address, text_signature = self.private_key.sign_text(test_message)
-                text_verification = verify_signed_text(
-                    test_message, address, text_signature
-                )
+                text_verification = verify_signed_text(test_message, address, text_signature)
 
                 print(f"📝 Text Signature: {text_signature}")
-                print(
-                    f"🔍 Text Verification: {'✅ VALID' if text_verification else '❌ INVALID'}"
-                )
+                print(f"🔍 Text Verification: {'✅ VALID' if text_verification else '❌ INVALID'}")
 
             except Exception as text_error:
                 print(f"⚠️ Text signature test error: {text_error}")

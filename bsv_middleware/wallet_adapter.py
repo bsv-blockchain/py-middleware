@@ -124,9 +124,7 @@ class MiddlewareWalletAdapter(WalletInterface):
                 # Convert byte array to bytes
                 message = bytes(message)
 
-            logger.debug(
-                f"create_signature: protocol={protocol_name}, message_len={len(message)}"
-            )
+            logger.debug(f"create_signature: protocol={protocol_name}, message_len={len(message)}")
 
             if not message:
                 raise ValueError("No message data found in args")
@@ -155,9 +153,7 @@ class MiddlewareWalletAdapter(WalletInterface):
                         return key_map[key]
                     raise KeyError(key)
 
-            result = SignatureResult(
-                signature, signature_alg or "ECDSA_secp256k1", protocol_name
-            )
+            result = SignatureResult(signature, signature_alg or "ECDSA_secp256k1", protocol_name)
             logger.debug(f"create_signature result: signature_len={len(signature)}")
             return result
 
@@ -257,9 +253,7 @@ class MiddlewareWalletAdapter(WalletInterface):
 
     # === Key-related methods ===
 
-    def reveal_counterparty_key_linkage(
-        self, args: Dict[str, Any], originator: str
-    ) -> Any:
+    def reveal_counterparty_key_linkage(self, args: Dict[str, Any], originator: str) -> Any:
         """Reveal counterparty key linkage - not implemented"""
         raise NotImplementedError("reveal_counterparty_key_linkage not implemented")
 
@@ -376,9 +370,7 @@ class ProtoWalletAdapter:
             keyID = 'nonce1 nonce2'
             counterparty = hex_string
         """
-        logger.debug(
-            f"[ADAPTER] create_signature called with args: {list(args.keys())}"
-        )
+        logger.debug(f"[ADAPTER] create_signature called with args: {list(args.keys())}")
 
         # BRC-100 compliant: Convert nested encryption_args to flat structure
         enc_args = args.get("encryption_args", {})
@@ -491,9 +483,7 @@ class ProtoWalletAdapter:
                 "protocolID": protocol_id_val,  # camelCase for ToolboxWallet
                 "keyID": enc_args.get("key_id"),  # camelCase for ToolboxWallet
                 "counterparty": enc_args.get("counterparty"),
-                "forSelf": enc_args.get(
-                    "for_self", False
-                ),  # camelCase for ToolboxWallet
+                "forSelf": enc_args.get("for_self", False),  # camelCase for ToolboxWallet
                 "data": data,
                 "signature": signature,
             }
@@ -516,9 +506,7 @@ class ProtoWalletAdapter:
                             cp_str = str(inner_cp)
                             # Extract hex from string like "<PublicKey hex=...>"
                             if "hex=" in cp_str:
-                                flat_args["counterparty"] = cp_str.split("hex=")[
-                                    1
-                                ].rstrip(">")
+                                flat_args["counterparty"] = cp_str.split("hex=")[1].rstrip(">")
                             else:
                                 flat_args["counterparty"] = cp_str
                         else:
@@ -672,9 +660,7 @@ def create_wallet_adapter(simple_wallet: Any) -> Any:
         )
 
     # Check if wallet is already a full ProtoWallet (has create_action, internalize_action, etc.)
-    if hasattr(simple_wallet, "create_action") and hasattr(
-        simple_wallet, "internalize_action"
-    ):
+    if hasattr(simple_wallet, "create_action") and hasattr(simple_wallet, "internalize_action"):
         logger.debug("Wallet is ProtoWallet, wrapping with ProtoWalletAdapter")
         return ProtoWalletAdapter(simple_wallet)
 

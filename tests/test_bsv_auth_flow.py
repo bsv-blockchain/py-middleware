@@ -57,9 +57,7 @@ class BSVAuthFlowTester:
                 return b"auth_test_signature_" + message[:10]
 
             def get_public_key(self) -> str:
-                return (
-                    "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"
-                )
+                return "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"
 
             def internalize_action(self, action: dict) -> dict:
                 return {
@@ -179,9 +177,7 @@ class BSVAuthFlowTester:
             ),
         ]
 
-    def test_well_known_auth_endpoint(
-        self, scenario: AuthTestScenario
-    ) -> Dict[str, Any]:
+    def test_well_known_auth_endpoint(self, scenario: AuthTestScenario) -> Dict[str, Any]:
         """Test /.well-known/auth endpoint with specific scenario"""
         print(f"\n🔐 Auth Test: {scenario.name}")
 
@@ -232,9 +228,7 @@ class BSVAuthFlowTester:
 
             # Log result
             status = "✅ PASS" if result["success"] else "❌ FAIL"
-            print(
-                f"   {status} Status: {status_code} (expected {scenario.expected_status})"
-            )
+            print(f"   {status} Status: {status_code} (expected {scenario.expected_status})")
             print(f"   Response: {str(response_data)[:150]}...")
 
             self.test_results.append(result)
@@ -345,9 +339,7 @@ class BSVAuthFlowTester:
 
         # Summary
         total_tests = len(self.test_results)
-        passed_tests = sum(
-            1 for result in self.test_results if result.get("success", False)
-        )
+        passed_tests = sum(1 for result in self.test_results if result.get("success", False))
         pass_rate = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
 
         summary = {
@@ -362,18 +354,12 @@ class BSVAuthFlowTester:
         }
 
         print("\n" + "=" * 60)
-        print(
-            f"📊 Auth Flow Summary: {passed_tests}/{total_tests} tests passed ({pass_rate:.1f}%)"
-        )
+        print(f"📊 Auth Flow Summary: {passed_tests}/{total_tests} tests passed ({pass_rate:.1f}%)")
 
         # Nonce test summary
-        create_passed = sum(
-            1 for t in nonce_results.get("create_nonce_tests", []) if t["success"]
-        )
+        create_passed = sum(1 for t in nonce_results.get("create_nonce_tests", []) if t["success"])
         create_total = len(nonce_results.get("create_nonce_tests", []))
-        verify_passed = sum(
-            1 for t in nonce_results.get("verify_nonce_tests", []) if t["success"]
-        )
+        verify_passed = sum(1 for t in nonce_results.get("verify_nonce_tests", []) if t["success"])
         verify_total = len(nonce_results.get("verify_nonce_tests", []))
 
         print(
@@ -393,6 +379,4 @@ if __name__ == "__main__":
         if result.get("success", False):
             print(f"   ✅ {result['scenario_name']}")
         else:
-            print(
-                f"   ❌ {result['scenario_name']}: {result.get('error', 'Test failed')}"
-            )
+            print(f"   ❌ {result['scenario_name']}: {result.get('error', 'Test failed')}")

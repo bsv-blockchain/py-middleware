@@ -262,9 +262,7 @@ class TestBSVTransportMultipartIntegration(TestCase):
     def test_bsv_protocol_body_preservation(self):
         """Test that BSV protocol preserves raw body for signature verification"""
         # Create multipart request with test file
-        test_file = SimpleUploadedFile(
-            "test.txt", b"test content", content_type="text/plain"
-        )
+        test_file = SimpleUploadedFile("test.txt", b"test content", content_type="text/plain")
 
         request = self.factory.post(
             "/upload/",
@@ -330,9 +328,7 @@ class TestMultipartErrorHandling(TestCase):
             return {"status": "success"}
 
         # Create authenticated request with invalid multipart
-        request = self.factory.post(
-            "/upload/", "invalid data", content_type="multipart/form-data"
-        )
+        request = self.factory.post("/upload/", "invalid data", content_type="multipart/form-data")
         request.bsv_auth = type(
             "MockAuth", (), {"authenticated": True, "identity_key": "test_key"}
         )()

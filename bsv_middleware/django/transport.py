@@ -79,12 +79,8 @@ class DjangoTransport(Transport):
 
         # Certificate handling (Phase 2.6: Express compatibility)
         self.on_certificates_received: Optional[CertificatesReceivedCallback] = None
-        self._certificate_listener_ids: Dict[
-            str, int
-        ] = {}  # identity_key -> listener_id
-        self.open_next_handlers: Dict[
-            str, Callable
-        ] = {}  # For continuation after cert receipt
+        self._certificate_listener_ids: Dict[str, int] = {}  # identity_key -> listener_id
+        self.open_next_handlers: Dict[str, Callable] = {}  # For continuation after cert receipt
 
     def set_peer(self, peer: Any) -> None:
         """
@@ -95,9 +91,7 @@ class DjangoTransport(Transport):
         self.peer = peer
         self._log("debug", "Peer set in DjangoTransport", {"peer": str(peer)})
 
-    def on_data(
-        self, callback: Callable[[Any, Any], Optional[Exception]]
-    ) -> Optional[Exception]:
+    def on_data(self, callback: Callable[[Any, Any], Optional[Exception]]) -> Optional[Exception]:
         """
         Register callback for incoming data.
 
@@ -349,9 +343,7 @@ class DjangoTransport(Transport):
                 "initialNonce": getattr(
                     message, "initial_nonce", getattr(message, "initialNonce", "")
                 ),
-                "yourNonce": getattr(
-                    message, "your_nonce", getattr(message, "yourNonce", "")
-                ),
+                "yourNonce": getattr(message, "your_nonce", getattr(message, "yourNonce", "")),
                 "identityKey": identity_key_str,
                 "certificates": getattr(message, "certificates", []),
                 "signature": signature_array,  # Send as array of integers, not hex string
@@ -365,9 +357,7 @@ class DjangoTransport(Transport):
                 "Initial response stored in request context",
                 {
                     "messageType": response_data["messageType"],
-                    "nonce": response_data["nonce"][:20] + "..."
-                    if response_data["nonce"]
-                    else "",
+                    "nonce": response_data["nonce"][:20] + "..." if response_data["nonce"] else "",
                 },
             )
 
@@ -409,9 +399,7 @@ class DjangoTransport(Transport):
                 return Exception("No response object in handle")
 
             # Parse status code and headers from payload (Express format)
-            status_code, headers, body = self._parse_general_message_payload(
-                payload[32:]
-            )
+            status_code, headers, body = self._parse_general_message_payload(payload[32:])
 
             # Build complete response headers
             response_headers = headers.copy()
@@ -479,9 +467,7 @@ class DjangoTransport(Transport):
                 headers["x-bsv-auth-signature"] = str(signature)
 
         if hasattr(message, "requestedCertificates") and message.requestedCertificates:
-            headers["x-bsv-auth-requested-certificates"] = json.dumps(
-                message.requestedCertificates
-            )
+            headers["x-bsv-auth-requested-certificates"] = json.dumps(message.requestedCertificates)
 
         return headers
 
@@ -510,9 +496,7 @@ class DjangoTransport(Transport):
                 from bsv_middleware.wallet_adapter import create_wallet_adapter
 
                 wallet = (
-                    self.py_sdk_bridge.wallet
-                    if hasattr(self.py_sdk_bridge, "wallet")
-                    else None
+                    self.py_sdk_bridge.wallet if hasattr(self.py_sdk_bridge, "wallet") else None
                 )
                 if wallet:
                     adapted_wallet = create_wallet_adapter(wallet)
@@ -558,18 +542,13 @@ class DjangoTransport(Transport):
 
         Equivalent to Express: Utils.Reader parsing logic
         """
-        try:
-            # Simple implementation - in real Express, this uses Utils.Reader
-            # For now, return default values
-            status_code = 200
-            headers: Dict[str, str] = {}
-            body = payload if payload else []
+        # Simple implementation - in real Express, this uses Utils.Reader
+        # For now, return default values
+        status_code = 200
+        headers: Dict[str, str] = {}
+        body = payload if payload else []
 
-            return status_code, headers, body
-
-        except Exception:
-            empty_headers: Dict[str, str] = {}
-            return 200, empty_headers, []
+        return status_code, headers, body
 
     def _message_to_dict(self, message: Any) -> Dict[str, Any]:
         """Convert AuthMessage to dictionary for JSON serialization."""
@@ -635,9 +614,7 @@ class DjangoTransport(Transport):
 
         try:
             if not self.peer:
-                self._log(
-                    "error", "No Peer set in DjangoTransport! Cannot handle request."
-                )
+                self._log("error", "No Peer set in DjangoTransport! Cannot handle request.")
                 raise BSVAuthException(
                     "You must set a Peer before you can handle incoming requests!"
                 )
@@ -682,9 +659,7 @@ class DjangoTransport(Transport):
                     "version": auth_message.version,
                     "message_type": auth_message.message_type,
                     "identity_key": (
-                        str(auth_message.identity_key)[:20]
-                        if auth_message.identity_key
-                        else None
+                        str(auth_message.identity_key)[:20] if auth_message.identity_key else None
                     ),
                     "nonce": auth_message.nonce[:20] if auth_message.nonce else None,
                 },
@@ -702,16 +677,11 @@ class DjangoTransport(Transport):
 
                 # Only register if session doesn't exist yet (like Express)
                 try:
-                    has_session = self.peer.session_manager.has_session(
-                        identity_key_str
-                    )
+                    has_session = self.peer.session_manager.has_session(identity_key_str)
                 except Exception:
                     has_session = False
 
-                if (
-                    not has_session
-                    and identity_key_str not in self._certificate_listener_ids
-                ):
+                if not has_session and identity_key_str not in self._certificate_listener_ids:
                     self._log(
                         "debug",
                         "Registering certificate listener for new session",
@@ -766,16 +736,12 @@ class DjangoTransport(Transport):
                         import traceback
 
                         traceback.print_exc()
-                        return self._create_error_response(
-                            f"Peer configuration error: {error!s}"
-                        )
+                        return self._create_error_response(f"Peer configuration error: {error!s}")
 
                     # py-sdk returns None on success, Exception on error
                     if error is not None and error != "":
                         self._log("error", f"Peer processing failed: {error}")
-                        return self._create_error_response(
-                            f"Authentication failed: {error}"
-                        )
+                        return self._create_error_response(f"Authentication failed: {error}")
                     else:
                         self._log("debug", "Peer processing successful")
                 except Exception as callback_error:
@@ -783,9 +749,7 @@ class DjangoTransport(Transport):
                     import traceback
 
                     traceback.print_exc()
-                    return self._create_error_response(
-                        f"Authentication failed: {callback_error}"
-                    )
+                    return self._create_error_response(f"Authentication failed: {callback_error}")
             else:
                 self._log(
                     "warning",
@@ -897,9 +861,7 @@ class DjangoTransport(Transport):
                         "debug",
                         f"Checking authenticated session for {identity_key.hex()[:20]}",
                     )
-                    session = self.peer.get_authenticated_session(
-                        identity_key, 0
-                    )  # No wait time
+                    session = self.peer.get_authenticated_session(identity_key, 0)  # No wait time
 
                     self._log(
                         "debug",
@@ -1021,9 +983,7 @@ class DjangoTransport(Transport):
                         "debug",
                         "AuthMessage created successfully",
                         {
-                            "message_type": getattr(
-                                auth_message, "message_type", "unknown"
-                            ),
+                            "message_type": getattr(auth_message, "message_type", "unknown"),
                             "identity_key_type": type(
                                 getattr(auth_message, "identity_key", None)
                             ).__name__,
@@ -1128,9 +1088,7 @@ class DjangoTransport(Transport):
             )
 
             # Set up general message listener (Express: peer.listenForGeneralMessages)
-            listener_id = self._setup_general_message_listener(
-                request, response, auth_message
-            )
+            listener_id = self._setup_general_message_listener(request, response, auth_message)
             self._log(
                 "debug",
                 "General message listener registered",
@@ -1283,13 +1241,9 @@ class DjangoTransport(Transport):
                         "debug",
                         "Certificate sender does not match expected identity",
                         {
-                            "expected": identity_key[:20] + "..."
-                            if identity_key
-                            else "None",
+                            "expected": identity_key[:20] + "..." if identity_key else "None",
                             "actual": (
-                                sender_public_key[:20] + "..."
-                                if sender_public_key
-                                else "None"
+                                sender_public_key[:20] + "..." if sender_public_key else "None"
                             ),
                         },
                     )
@@ -1322,9 +1276,7 @@ class DjangoTransport(Transport):
                     {
                         "senderPublicKey": sender_public_key,
                         "certCount": len(certificates),
-                        "firstCertType": type(certificates[0]).__name__
-                        if certificates
-                        else "None",
+                        "firstCertType": type(certificates[0]).__name__ if certificates else "None",
                     },
                 )
 
@@ -1346,9 +1298,7 @@ class DjangoTransport(Transport):
                         # Continue processing despite callback error
 
                 # Express logic: handle next() function equivalent
-                self._handle_certificate_processing_complete(
-                    identity_key, validated_certificates
-                )
+                self._handle_certificate_processing_complete(identity_key, validated_certificates)
 
                 # Express logic: clean up handles and stop listener
                 self._cleanup_certificate_handles(identity_key)
@@ -1356,9 +1306,7 @@ class DjangoTransport(Transport):
                 # Store listener ID for cleanup (Express: stopListeningForCertificatesReceived)
                 if hasattr(self, "_active_certificate_listeners"):
                     listener_id = getattr(self, "_current_listener_id", None)
-                    if listener_id and hasattr(
-                        self.peer, "stopListeningForCertificatesReceived"
-                    ):
+                    if listener_id and hasattr(self.peer, "stopListeningForCertificatesReceived"):
                         try:
                             self.peer.stopListeningForCertificatesReceived(listener_id)
                             self._log(
@@ -1367,15 +1315,11 @@ class DjangoTransport(Transport):
                                 {"listenerId": listener_id},
                             )
                         except Exception as e:
-                            self._log(
-                                "warn", f"Failed to stop certificate listener: {e}"
-                            )
+                            self._log("warn", f"Failed to stop certificate listener: {e}")
 
             # Register listener with py-sdk Peer (Express equivalent)
             if hasattr(self.peer, "listenForCertificatesReceived"):
-                listener_id = self.peer.listenForCertificatesReceived(
-                    certificate_callback
-                )
+                listener_id = self.peer.listenForCertificatesReceived(certificate_callback)
                 self._log(
                     "debug",
                     "listenForCertificatesReceived registered",
@@ -1422,9 +1366,7 @@ class DjangoTransport(Transport):
                         "Invalid certificate format detected",
                         {
                             "certType": type(cert).__name__,
-                            "certData": str(cert)[:100] + "..."
-                            if str(cert)
-                            else "None",
+                            "certData": str(cert)[:100] + "..." if str(cert) else "None",
                         },
                     )
 
@@ -1455,10 +1397,7 @@ class DjangoTransport(Transport):
                 return all(field in certificate for field in required_fields)
 
             # For mock/test certificates
-            if (
-                hasattr(certificate, "_mock_name")
-                or "mock" in str(type(certificate)).lower()
-            ):
+            if hasattr(certificate, "_mock_name") or "mock" in str(type(certificate)).lower():
                 return True
 
             return False
@@ -1479,9 +1418,7 @@ class DjangoTransport(Transport):
                 "debug",
                 "Certificate processing complete",
                 {
-                    "identityKey": identity_key[:20] + "..."
-                    if identity_key
-                    else "None",
+                    "identityKey": identity_key[:20] + "..." if identity_key else "None",
                     "certCount": len(certificates),
                 },
             )
@@ -1494,15 +1431,10 @@ class DjangoTransport(Transport):
                         identity_key, {"certificates": certificates}
                     )
                 except Exception as e:
-                    self._log(
-                        "warn", f"Failed to update session with certificates: {e}"
-                    )
+                    self._log("warn", f"Failed to update session with certificates: {e}")
 
             # Trigger next handlers if available (Express openNextHandlers equivalent)
-            if (
-                hasattr(self, "_open_next_handlers")
-                and identity_key in self._open_next_handlers
-            ):
+            if hasattr(self, "_open_next_handlers") and identity_key in self._open_next_handlers:
                 next_fn = self._open_next_handlers[identity_key]
                 if callable(next_fn):
                     try:
@@ -1527,9 +1459,7 @@ class DjangoTransport(Transport):
                 if handles:
                     # Remove handles related to this identity
                     self.open_non_general_handles[nonce] = [
-                        h
-                        for h in handles
-                        if not self._handle_belongs_to_identity(h, identity_key)
+                        h for h in handles if not self._handle_belongs_to_identity(h, identity_key)
                     ]
 
                     # Remove empty handle lists
@@ -1545,9 +1475,7 @@ class DjangoTransport(Transport):
         except Exception as e:
             self._log("error", f"Error cleaning up certificate handles: {e}")
 
-    def _handle_belongs_to_identity(
-        self, handle: Dict[str, Any], identity_key: str
-    ) -> bool:
+    def _handle_belongs_to_identity(self, handle: Dict[str, Any], identity_key: str) -> bool:
         """Check if handle belongs to specific identity key."""
         try:
             request = handle.get("request")
@@ -1648,22 +1576,14 @@ class DjangoTransport(Transport):
                             n_headers = reader.read_var_int_num()
                             if n_headers and n_headers > 0 and n_headers != NEG_ONE:
                                 # Sanity check to prevent overflow in range()
-                                if (
-                                    n_headers > 1000
-                                ):  # Reasonable limit for HTTP headers
-                                    raise ValueError(
-                                        f"Unreasonable header count: {n_headers}"
-                                    )
+                                if n_headers > 1000:  # Reasonable limit for HTTP headers
+                                    raise ValueError(f"Unreasonable header count: {n_headers}")
                                 for _ in range(int(n_headers)):
                                     key_len = reader.read_var_int_num()
                                     if key_len and key_len > 0 and key_len != NEG_ONE:
                                         reader.read_bytes(key_len)
                                     value_len = reader.read_var_int_num()
-                                    if (
-                                        value_len
-                                        and value_len > 0
-                                        and value_len != NEG_ONE
-                                    ):
+                                    if value_len and value_len > 0 and value_len != NEG_ONE:
                                         reader.read_bytes(value_len)
 
                             # Read body (this is the JSON-RPC request)
@@ -1674,18 +1594,14 @@ class DjangoTransport(Transport):
                                 request._body = extracted_body
                                 # Update content type and length headers
                                 request.META["CONTENT_TYPE"] = "application/json"
-                                request.META["CONTENT_LENGTH"] = str(
-                                    len(extracted_body)
-                                )
+                                request.META["CONTENT_LENGTH"] = str(len(extracted_body))
                                 self._log(
                                     "debug",
                                     "Extracted HTTP request body from payload",
                                     {"bodyLength": len(extracted_body)},
                                 )
                         except Exception as e:
-                            self._log(
-                                "warn", f"Failed to extract body from payload: {e}"
-                            )
+                            self._log("warn", f"Failed to extract body from payload: {e}")
 
                     self._log(
                         "debug",
@@ -1704,9 +1620,7 @@ class DjangoTransport(Transport):
 
             # Register listener with py-sdk Peer (snake_case method name)
             if hasattr(self.peer, "listen_for_general_messages"):
-                listener_id = self.peer.listen_for_general_messages(
-                    general_message_callback
-                )
+                listener_id = self.peer.listen_for_general_messages(general_message_callback)
                 self._log(
                     "debug",
                     "listen_for_general_messages registered",
@@ -1715,9 +1629,7 @@ class DjangoTransport(Transport):
                 return listener_id
             elif hasattr(self.peer, "listenForGeneralMessages"):
                 # Fallback for camelCase (older SDK versions)
-                listener_id = self.peer.listenForGeneralMessages(
-                    general_message_callback
-                )
+                listener_id = self.peer.listenForGeneralMessages(general_message_callback)
                 self._log(
                     "debug",
                     "listenForGeneralMessages (camelCase) registered",
@@ -1827,8 +1739,7 @@ class DjangoTransport(Transport):
                 value = value.split(";")[0].strip()
             # Include matching headers
             if (
-                key_lower.startswith("x-bsv-")
-                and not key_lower.startswith("x-bsv-auth-")
+                key_lower.startswith("x-bsv-") and not key_lower.startswith("x-bsv-auth-")
             ) or key_lower in ["content-type", "authorization"]:
                 filtered_headers.append((key_lower, value))
 
@@ -1894,9 +1805,7 @@ class DjangoTransport(Transport):
                     import hashlib
 
                     payload_digest = hashlib.sha256(payload).digest()
-                    self._log(
-                        "debug", f"[SERVER] Payload digest: {payload_digest.hex()[:64]}"
-                    )
+                    self._log("debug", f"[SERVER] Payload digest: {payload_digest.hex()[:64]}")
                     self._log("debug", f"[SERVER] Payload length: {len(payload)} bytes")
                 except Exception as e:
                     self._log("warn", f"Failed to log payload digest: {e}")
@@ -1966,9 +1875,7 @@ class DjangoTransport(Transport):
                 if key == "nonce":
                     # For initialRequest, client's field is 'nonce' but AuthMessage expects 'initial_nonce'
                     # For general messages, it must remain 'nonce'
-                    msg_type = message_data.get("messageType") or message_data.get(
-                        "message_type"
-                    )
+                    msg_type = message_data.get("messageType") or message_data.get("message_type")
                     if msg_type == "initialRequest":
                         converted_key = "initial_nonce"
                     else:
@@ -2007,9 +1914,7 @@ class DjangoTransport(Transport):
 
             # Optional arguments
             nonce = converted_data.get("nonce", "")
-            initial_nonce = converted_data.get(
-                "initial_nonce", nonce
-            )  # Use nonce as fallback
+            initial_nonce = converted_data.get("initial_nonce", nonce)  # Use nonce as fallback
             your_nonce = converted_data.get("your_nonce", "")
             certificates = converted_data.get("certificates", [])
             requested_certificates = converted_data.get("requested_certificates")
@@ -2040,9 +1945,7 @@ class DjangoTransport(Transport):
 
             return SimpleAuthMessage(message_data)
 
-    def _log(
-        self, level: str, message: str, data: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def _log(self, level: str, message: str, data: Optional[Dict[str, Any]] = None) -> None:
         """
         Log a message at the specified level with optional data.
 
@@ -2128,9 +2031,7 @@ class DjangoTransport(Transport):
         Returns:
             bool: True if multipart/form-data request
         """
-        is_multipart = request.META.get("CONTENT_TYPE", "").startswith(
-            "multipart/form-data"
-        )
+        is_multipart = request.META.get("CONTENT_TYPE", "").startswith("multipart/form-data")
 
         if is_multipart:
             self._log(
@@ -2178,15 +2079,11 @@ class DjangoTransport(Transport):
         try:
             # Check if peer has the required method
             if not hasattr(self.peer, "listen_for_certificates_received"):
-                self._log(
-                    "warn", "Peer does not support listen_for_certificates_received"
-                )
+                self._log("warn", "Peer does not support listen_for_certificates_received")
                 return None
 
             # Define the certificate callback
-            def certificate_callback(
-                sender_public_key: str, certificates: List[Any]
-            ) -> None:
+            def certificate_callback(sender_public_key: str, certificates: List[Any]) -> None:
                 """
                 Callback invoked when certificates are received.
 
@@ -2208,9 +2105,7 @@ class DjangoTransport(Transport):
                         "Certificate sender mismatch, ignoring",
                         {
                             "expected": identity_key[:20],
-                            "received": sender_public_key[:20]
-                            if sender_public_key
-                            else None,
+                            "received": sender_public_key[:20] if sender_public_key else None,
                         },
                     )
                     return
@@ -2260,9 +2155,7 @@ class DjangoTransport(Transport):
                 self._cleanup_certificate_listener(identity_key, sender_public_key)
 
             # Register the listener with py-sdk Peer
-            listener_id = self.peer.listen_for_certificates_received(
-                certificate_callback
-            )
+            listener_id = self.peer.listen_for_certificates_received(certificate_callback)
 
             self._log(
                 "debug",
@@ -2283,9 +2176,7 @@ class DjangoTransport(Transport):
             traceback.print_exc()
             return None
 
-    def _cleanup_certificate_listener(
-        self, identity_key: str, sender_public_key: str
-    ) -> None:
+    def _cleanup_certificate_listener(self, identity_key: str, sender_public_key: str) -> None:
         """
         Clean up certificate listener after certificates are received.
 

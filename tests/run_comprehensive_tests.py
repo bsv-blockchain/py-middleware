@@ -203,9 +203,7 @@ class SimpleAPITester:
     def generate_report(self):
         """Generate comprehensive test report"""
         total_tests = len(self.test_results)
-        successful_tests = sum(
-            1 for result in self.test_results if result.get("success", False)
-        )
+        successful_tests = sum(1 for result in self.test_results if result.get("success", False))
         failed_tests = total_tests - successful_tests
 
         report = {
@@ -214,9 +212,7 @@ class SimpleAPITester:
                 "successful_tests": successful_tests,
                 "failed_tests": failed_tests,
                 "success_rate": (
-                    round((successful_tests / total_tests) * 100, 2)
-                    if total_tests > 0
-                    else 0
+                    round((successful_tests / total_tests) * 100, 2) if total_tests > 0 else 0
                 ),
             },
             "test_results": self.test_results,
@@ -235,9 +231,7 @@ class SimpleAPITester:
             print("\n❌ Failed Tests:")
             for result in self.test_results:
                 if not result.get("success", False):
-                    print(
-                        f"   - {result['endpoint']}: {result.get('error', 'Unknown error')}"
-                    )
+                    print(f"   - {result['endpoint']}: {result.get('error', 'Unknown error')}")
         else:
             print("\n🎉 All tests passed!")
 

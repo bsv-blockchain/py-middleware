@@ -75,24 +75,17 @@ class TestCertificateExpanded:
         # In a real implementation, this would request specific certificate types
 
         requested_certificates = {
-            "certifiers": [
-                "03caa1baafa05ecbf1a5b310a7a0b00bc1633f56267d9f67b1fd6bb23b3ef1abfa"
-            ],
+            "certifiers": ["03caa1baafa05ecbf1a5b310a7a0b00bc1633f56267d9f67b1fd6bb23b3ef1abfa"],
             "types": {"z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=": ["firstName"]},
         }
 
         # Mock certificate request handling
         # In real implementation, this would use AuthFetch.sendCertificateRequest
         assert requested_certificates["certifiers"]
-        assert (
-            "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="
-            in requested_certificates["types"]
-        )
+        assert "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=" in requested_certificates["types"]
         assert (
             "firstName"
-            in requested_certificates["types"][
-                "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="
-            ]
+            in requested_certificates["types"]["z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="]
         )
 
         print("✅ Certificate request with type filtering validated")
@@ -198,9 +191,7 @@ class TestServerRestartPersistence:
             return JsonResponse(
                 {
                     "session_id": (
-                        request.session.session_key
-                        if hasattr(request, "session")
-                        else None
+                        request.session.session_key if hasattr(request, "session") else None
                     ),
                     "authenticated": hasattr(request, "bsv_auth"),
                     "identity": (
@@ -331,9 +322,7 @@ class TestIdentityContextExpanded:
         request.auth = AuthInfo(identity_key="02xyz5678")
         result = get_request_auth_info(request)
         assert result is not None and result.identity_key == "02xyz5678"
-        print(
-            "✅ Get authenticated identity with authenticated identity returns correct value"
-        )
+        print("✅ Get authenticated identity with authenticated identity returns correct value")
 
     # Group 3: Is Not Authenticated Tests (3 tests)
 
@@ -507,9 +496,7 @@ class TestContentTypeVariations:
         """
 
         def dummy_view(request):
-            return JsonResponse(
-                {"method": request.method, "has_body": len(request.body) > 0}
-            )
+            return JsonResponse({"method": request.method, "has_body": len(request.body) > 0})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -678,9 +665,7 @@ class TestPaymentMiddlewareConfiguration:
                 # If it doesn't error, it should at least deny access
                 print(f"   Response status: {response.status_code}")
             except Exception as e:
-                print(
-                    f"✅ Payment middleware correctly requires auth: {type(e).__name__}"
-                )
+                print(f"✅ Payment middleware correctly requires auth: {type(e).__name__}")
 
         except Exception as e:
             print(f"✅ Payment middleware configuration validation: {type(e).__name__}")

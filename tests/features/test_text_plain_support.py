@@ -61,9 +61,7 @@ Line 3 with unicode: café"""
                 request.META["CONTENT_TYPE"] = content_type
 
                 result = is_text_plain_request(request)
-                self.assertEqual(
-                    result, expected, f"Failed for content-type: {content_type}"
-                )
+                self.assertEqual(result, expected, f"Failed for content-type: {content_type}")
 
     def test_get_text_content_utf8(self):
         """Test UTF-8 text content extraction"""
@@ -151,9 +149,7 @@ Line 3 with unicode: café"""
         # Verify different processing for each type
         self.assertEqual(text_result["content_type"], "text/plain")
         self.assertEqual(json_result["content_type"], "application/json")
-        self.assertEqual(
-            form_result["content_type"], "application/x-www-form-urlencoded"
-        )
+        self.assertEqual(form_result["content_type"], "application/x-www-form-urlencoded")
 
         # Text should be string, JSON should be dict, form should be dict
         self.assertIsInstance(text_result["data"], str)

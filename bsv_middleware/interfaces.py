@@ -58,9 +58,7 @@ class TransportInterface(Protocol):
         """
         ...
 
-    def on_data(
-        self, callback: Callable[[Any], Optional[Exception]]
-    ) -> Optional[Exception]:
+    def on_data(self, callback: Callable[[Any], Optional[Exception]]) -> Optional[Exception]:
         """
         Register callback for incoming data.
 
@@ -106,9 +104,7 @@ class SessionManagerInterface(Protocol):
         """
         ...
 
-    def create_session(
-        self, identity_key: str, auth_data: Optional[Any] = None
-    ) -> None:
+    def create_session(self, identity_key: str, auth_data: Optional[Any] = None) -> None:
         """
         Create a new BSV session for the given identity key.
 

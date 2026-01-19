@@ -105,9 +105,7 @@ class BRCProtocolTester:
         # Verify header can be parsed
         try:
             payment_data = json.loads(request.META["HTTP_X_BSV_PAYMENT"])
-            all_fields_present = all(
-                field in payment_data for field in payment_structure
-            )
+            all_fields_present = all(field in payment_data for field in payment_structure)
 
             if all_fields_present:
                 print("   ✅ Valid payment structure detected")
@@ -182,9 +180,7 @@ class BRCProtocolTester:
 
                 # Check required fields
                 missing_fields = [
-                    field
-                    for field in scenario["expected_fields"]
-                    if field not in response_data
+                    field for field in scenario["expected_fields"] if field not in response_data
                 ]
 
                 if not missing_fields:
@@ -193,10 +189,7 @@ class BRCProtocolTester:
                     print(f"      ❌ Missing fields: {missing_fields}")
 
                 # Check BSV headers detection
-                if (
-                    "headers" in response_data
-                    and "bsv_headers" in response_data["headers"]
-                ):
+                if "headers" in response_data and "bsv_headers" in response_data["headers"]:
                     bsv_header_count = len(response_data["headers"]["bsv_headers"])
                     print(f"      📊 BSV headers detected: {bsv_header_count}")
 
@@ -240,15 +233,11 @@ class BRCProtocolTester:
 
                 # Check status code
                 status_match = response.status_code == scenario["expected_status"]
-                print(
-                    f"      📊 Status: {response.status_code} {'✅' if status_match else '❌'}"
-                )
+                print(f"      📊 Status: {response.status_code} {'✅' if status_match else '❌'}")
 
                 # Check required fields
                 missing_fields = [
-                    field
-                    for field in scenario["expected_fields"]
-                    if field not in response_data
+                    field for field in scenario["expected_fields"] if field not in response_data
                 ]
 
                 if not missing_fields:

@@ -306,9 +306,7 @@ class TestMissingHighPriority:
         """
 
         def dummy_view(request):
-            return JsonResponse(
-                {"method": request.method, "query": request.GET.urlencode()}
-            )
+            return JsonResponse({"method": request.method, "query": request.GET.urlencode()})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -513,9 +511,7 @@ class TestMissingHighPriority:
         identity_key_1 = wallet1.get_public_key(args={"identityKey": True})["publicKey"]
         identity_key_2 = wallet2.get_public_key(args={"identityKey": True})["publicKey"]
 
-        assert identity_key_1 == identity_key_2, (
-            "Same user should have same identity key"
-        )
+        assert identity_key_1 == identity_key_2, "Same user should have same identity key"
 
         print(f"Client 1 identity: {identity_key_1[:20]}...")
         print(f"Client 2 identity: {identity_key_2[:20]}...")
@@ -542,9 +538,9 @@ class TestMissingHighPriority:
         identity_key_1 = wallet1.get_public_key(args={"identityKey": True})["publicKey"]
         identity_key_2 = wallet2.get_public_key(args={"identityKey": True})["publicKey"]
 
-        assert identity_key_1 != identity_key_2, (
-            "Different users should have different identity keys"
-        )
+        assert (
+            identity_key_1 != identity_key_2
+        ), "Different users should have different identity keys"
 
         print(f"User 1 identity: {identity_key_1[:20]}...")
         print(f"User 2 identity: {identity_key_2[:20]}...")
@@ -593,9 +589,7 @@ class TestMissingHighPriority:
             if response.status_code == 401:
                 print("Correctly rejected unauthenticated request")
             else:
-                print(
-                    "Middleware allows unauthenticated requests (may be configured differently)"
-                )
+                print("Middleware allows unauthenticated requests (may be configured differently)")
 
         except Exception as e:
             print(f"Unauthenticated request test: {e}")

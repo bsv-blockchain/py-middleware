@@ -238,9 +238,7 @@ class TestMiddlewareAuthentication:
         print("Test 4: Binary POST Request")
 
         def dummy_view(request):
-            return JsonResponse(
-                {"status": "success", "received_bytes": len(request.body)}
-            )
+            return JsonResponse({"status": "success", "received_bytes": len(request.body)})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -404,9 +402,7 @@ class TestMiddlewareAuthentication:
         print("Test 8: Request with Query Parameters")
 
         def dummy_view(request):
-            return JsonResponse(
-                {"status": "query received", "params": dict(request.GET)}
-            )
+            return JsonResponse({"status": "query received", "params": dict(request.GET)})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -456,9 +452,7 @@ class TestMiddlewareAuthentication:
         middleware = BSVAuthMiddleware(dummy_view)
 
         # Request with custom headers
-        request = self.factory.get(
-            "/api/endpoint", HTTP_X_BSV_CUSTOM_HEADER="CustomHeaderValue"
-        )
+        request = self.factory.get("/api/endpoint", HTTP_X_BSV_CUSTOM_HEADER="CustomHeaderValue")
 
         # Add session
         from django.contrib.sessions.middleware import SessionMiddleware
@@ -526,9 +520,7 @@ class TestMiddlewareAuthentication:
         # Edge Case B: Empty body
         print("\n  📋 Edge Case B: Empty body")
         try:
-            request_b = self.factory.post(
-                "/api/endpoint", data="", content_type="application/json"
-            )
+            request_b = self.factory.post("/api/endpoint", data="", content_type="application/json")
             session_middleware.process_request(request_b)
             request_b.session.save()
 

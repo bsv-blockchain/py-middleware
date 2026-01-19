@@ -51,9 +51,7 @@ class PerformanceTester:
         self.py_sdk_bridge = PySdkBridge(self.mock_wallet)
 
         if py_sdk_available:
-            self.private_key = PrivateKey(
-                "L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9"
-            )
+            self.private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
             self.identity_key = self.private_key.public_key().hex()
 
     def create_mock_wallet(self):
@@ -177,9 +175,7 @@ class PerformanceTester:
             payment_data = {
                 "derivationPrefix": f"perf_prefix_{i}",
                 "derivationSuffix": f"perf_suffix_{i}",
-                "transaction": base64.b64encode(f"perf_tx_{i}".encode()).decode(
-                    "utf-8"
-                ),
+                "transaction": base64.b64encode(f"perf_tx_{i}".encode()).decode("utf-8"),
             }
 
             action_args = {
@@ -199,9 +195,7 @@ class PerformanceTester:
             }
 
             start = time.perf_counter()
-            self.mock_wallet.internalize_action(
-                {}, {"action": action_args}, "perf_test"
-            )
+            self.mock_wallet.internalize_action({}, {"action": action_args}, "perf_test")
             end = time.perf_counter()
 
             elapsed_ms = (end - start) * 1000
@@ -274,9 +268,7 @@ class PerformanceTester:
         print("\n⚡ Test 5: Concurrent Request Handling")
         print("=" * 60)
 
-        print(
-            f"🔄 Processing {num_requests} concurrent requests with {num_workers} workers..."
-        )
+        print(f"🔄 Processing {num_requests} concurrent requests with {num_workers} workers...")
 
         def process_request(request_id):
             """Process single request"""
@@ -292,9 +284,9 @@ class PerformanceTester:
             payment_data = {
                 "derivationPrefix": f"concurrent_prefix_{request_id}",
                 "derivationSuffix": f"concurrent_suffix_{request_id}",
-                "transaction": base64.b64encode(
-                    f"concurrent_tx_{request_id}".encode()
-                ).decode("utf-8"),
+                "transaction": base64.b64encode(f"concurrent_tx_{request_id}".encode()).decode(
+                    "utf-8"
+                ),
             }
 
             action_args = {
@@ -424,12 +416,8 @@ def main():
 
     results = {
         "nonce_creation": tester.test_nonce_creation_performance(iterations=100),
-        "nonce_verification": tester.test_nonce_verification_performance(
-            iterations=100
-        ),
-        "payment_internalization": tester.test_payment_internalization_performance(
-            iterations=50
-        ),
+        "nonce_verification": tester.test_nonce_verification_performance(iterations=100),
+        "payment_internalization": tester.test_payment_internalization_performance(iterations=50),
         "request_throughput": tester.test_request_throughput(duration_seconds=5),
         "concurrent_handling": tester.test_concurrent_request_handling(
             num_requests=50, num_workers=10
