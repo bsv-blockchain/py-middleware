@@ -144,7 +144,7 @@ class TestIssue6CamelCaseAdapterRemoved:
     def test_camelcase_adapter_not_importable(self):
         """Verify CamelCaseWalletAdapter cannot be imported."""
         with pytest.raises(ImportError):
-            pass
+            from bsv.wallet.wallet_interface import CamelCaseWalletAdapter
 
 
 class TestIssue2RedundantAssignmentRemoved:

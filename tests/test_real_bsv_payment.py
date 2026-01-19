@@ -299,8 +299,6 @@ class RealBSVPaymentTester:
             print("✅ Payment info created for request")
 
             # Response header (Express: lines 120-122)
-            response_header = {"x-bsv-payment-satoshis-paid": str(payment_info["satoshisPaid"])}
-
             print(
                 f"✅ Response header set: x-bsv-payment-satoshis-paid: {payment_info['satoshisPaid']}"
             )
@@ -383,11 +381,6 @@ class RealBSVPaymentTester:
             # Step 4: Check for payment header (Express: lines 59-74)
             print("\n📋 Step 4: Check for payment header")
             has_payment_header = True  # Simulate payment provided
-
-            if not has_payment_header:
-                print("⚠️ No payment header → Would return 402 Payment Required")
-                return False
-
             print("✅ Payment header present")
 
             # Step 5: Verify and internalize payment (Express: lines 76-132)

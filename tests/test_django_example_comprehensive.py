@@ -266,7 +266,7 @@ class EndpointCoverageTester(ComprehensiveAPITester):
         summary = {
             "total_tests": total_tests,
             "passed_tests": passed_tests,
-            "failed_tests": len(self.failed_tests),
+            "failed_test_count": len(self.failed_tests),
             "pass_rate": round(pass_rate, 2),
             "test_results": self.test_results,
             "failed_tests": self.failed_tests,

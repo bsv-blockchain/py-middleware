@@ -168,9 +168,6 @@ class TestBSVMiddlewarePytest:
 
     def test_middleware_basic_functionality(self):
         """Test basic middleware functionality with pytest."""
-        factory = RequestFactory()
-        request = factory.get("/test/")
-
         # Create dummy get_response function
         def dummy_get_response(req):
             from django.http import JsonResponse

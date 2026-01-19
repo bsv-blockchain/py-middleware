@@ -243,8 +243,6 @@ class DjangoTransport(Transport):
             )
 
             # Set response content (AuthMessage as JSON)
-            import json
-
             try:
                 message_dict = self._message_to_dict(message)
                 response.content = json.dumps(message_dict).encode("utf-8")
@@ -281,7 +279,6 @@ class DjangoTransport(Transport):
 
             # Use stored context from pending_response or request attribute
             request = getattr(self, "_pending_request", None)
-            response = getattr(self, "_pending_response", None)
 
             if not request:
                 return Exception("No request context available for initial response")
@@ -306,19 +303,19 @@ class DjangoTransport(Transport):
                 # If it's a hex string, convert to bytes then to list
                 try:
                     signature_array = list(bytes.fromhex(signature_raw))
-                except:
+                except (ValueError, TypeError):
                     # If hex conversion fails, try as base64
                     import base64
 
                     try:
                         signature_array = list(base64.b64decode(signature_raw))
-                    except:
+                    except (ValueError, TypeError):
                         signature_array = []
             else:
                 # Try to convert to bytes first
                 try:
                     signature_array = list(bytes(signature_raw))
-                except:
+                except (ValueError, TypeError):
                     signature_array = []
 
             response_data: Dict[str, Any] = {
@@ -451,8 +448,6 @@ class DjangoTransport(Transport):
                 headers["x-bsv-auth-signature"] = str(signature)
 
         if hasattr(message, "requestedCertificates") and message.requestedCertificates:
-            import json
-
             headers["x-bsv-auth-requested-certificates"] = json.dumps(message.requestedCertificates)
 
         return headers
@@ -566,8 +561,6 @@ class DjangoTransport(Transport):
                 else:
                     try:
                         # Test if value is JSON serializable
-                        import json
-
                         json.dumps(value)
                         result[attr] = value
                     except (TypeError, ValueError):
@@ -924,8 +917,6 @@ class DjangoTransport(Transport):
             # Parse AuthMessage from request body (Express: req.body as AuthMessage)
             if not request.body:
                 raise BSVAuthException("Empty request body for /.well-known/auth")
-
-            import json
 
             message_data = json.loads(request.body.decode("utf-8"))
             self._log(
@@ -1444,8 +1435,6 @@ class DjangoTransport(Transport):
                 # Check request body for identity key
                 if hasattr(request.body, "decode"):
                     try:
-                        import json
-
                         body_data = json.loads(request.body.decode("utf-8"))
                         return body_data.get("identityKey") == identity_key
                     except Exception:
@@ -1748,8 +1737,6 @@ class DjangoTransport(Transport):
             cert_header = headers.get("x-bsv-auth-requested-certificates")
             if cert_header:
                 try:
-                    import json
-
                     message_data["requestedCertificates"] = json.loads(cert_header)
                 except Exception as e:
                     self._log("warn", f"Failed to parse requested certificates: {e}")
@@ -1919,8 +1906,6 @@ class DjangoTransport(Transport):
             full_message += f" {data}"
 
         # Use Django logging
-        import logging
-
         logger = logging.getLogger(__name__)
 
         if level == "debug":

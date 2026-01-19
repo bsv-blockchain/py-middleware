@@ -195,7 +195,7 @@ class PerformanceTester:
             }
 
             start = time.perf_counter()
-            result = self.mock_wallet.internalize_action({}, {"action": action_args}, "perf_test")
+            self.mock_wallet.internalize_action({}, {"action": action_args}, "perf_test")
             end = time.perf_counter()
 
             elapsed_ms = (end - start) * 1000
