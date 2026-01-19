@@ -104,3 +104,39 @@ jobs:
             body: comment
           });
 
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-build
+
+      - name: Install build dependencies
+        run: python -m pip install --upgrade pip build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check distribution
+        run: |
+          python -m pip install twine
+          twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
