@@ -55,12 +55,25 @@ class TestIssue5RuntimeCheckable:
         
         # Find is_wallet_interface function
         assert 'def is_wallet_interface' in content
-        
+
         # Verify it uses isinstance (not hardcoded list)
         is_wallet_func_start = content.find('def is_wallet_interface')
-        is_wallet_func_end = content.find('\n\n', is_wallet_func_start)
+        # Find the end of the function by looking for the next top-level definition or __all__
+        next_def = content.find('\n\ndef ', is_wallet_func_start + 1)
+        next_all = content.find('\n\n__all__', is_wallet_func_start + 1)
+
+        # Use the first match found (whichever comes first)
+        if next_def != -1 and (next_all == -1 or next_def < next_all):
+            is_wallet_func_end = next_def
+        elif next_all != -1:
+            is_wallet_func_end = next_all
+        else:
+            # Fallback to finding double newline after return statement
+            return_pos = content.find('return isinstance(obj, WalletInterface)', is_wallet_func_start)
+            is_wallet_func_end = content.find('\n\n', return_pos)
+
         is_wallet_func = content[is_wallet_func_start:is_wallet_func_end]
-        
+
         assert 'return isinstance(obj, WalletInterface)' in is_wallet_func
         # Verify hardcoded list is NOT present
         assert 'required_methods = [' not in is_wallet_func
