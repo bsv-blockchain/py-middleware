@@ -1,0 +1,185 @@
+{
+  "test_summary": {
+    "total_tests": 9,
+    "successful_tests": 9,
+    "failed_tests": 0,
+    "success_rate": 100.0
+  },
+  "test_results": [
+    {
+      "endpoint": "Home Page",
+      "path": "/",
+      "method": "GET",
+      "status_code": 200,
+      "response_data": {
+        "message": "Welcome to BSV Middleware Example",
+        "endpoints": {
+          "/": "This home page (free)",
+          "/health/": "Health check (free)",
+          "/public/": "Public endpoint (free)",
+          "/protected/": "Protected endpoint (requires auth)",
+          "/premium/": "Premium endpoint (requires payment)",
+          "/.well-known/auth": "BSV auth endpoint"
+        },
+        "identity_key": "unknown",
+        "authenticated": false,
+        "payment_processed": false
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130458"
+    },
+    {
+      "endpoint": "Health Check",
+      "path": "/health/",
+      "method": "GET",
+      "status_code": 200,
+      "response_data": {
+        "status": "healthy",
+        "service": "BSV Middleware Example",
+        "identity_key": "unknown"
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130538"
+    },
+    {
+      "endpoint": "Public Endpoint",
+      "path": "/public/",
+      "method": "GET",
+      "status_code": 200,
+      "response_data": {
+        "message": "This is a public endpoint",
+        "access": "free",
+        "identity_key": "unknown",
+        "authenticated": false,
+        "certificates_count": 0,
+        "certificates": []
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130596"
+    },
+    {
+      "endpoint": "Protected Endpoint (No Auth)",
+      "path": "/protected/",
+      "method": "GET",
+      "status_code": 401,
+      "response_data": {
+        "error": "Authentication required",
+        "message": "This endpoint requires BSV authentication",
+        "identity_key": "unknown"
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130639"
+    },
+    {
+      "endpoint": "Premium Endpoint (No Auth)",
+      "path": "/premium/",
+      "method": "GET",
+      "status_code": 401,
+      "response_data": {
+        "error": "Authentication required",
+        "message": "This premium endpoint requires BSV authentication",
+        "identity_key": "unknown"
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130675"
+    },
+    {
+      "endpoint": "Auth Test GET",
+      "path": "/auth-test/",
+      "method": "GET",
+      "status_code": 200,
+      "response_data": {
+        "method": "GET",
+        "path": "/auth-test/",
+        "identity_key": "unknown",
+        "authenticated": false,
+        "certificates": {
+          "count": 0,
+          "certificates": []
+        },
+        "payment": null,
+        "headers": {
+          "bsv_headers": {}
+        }
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130733"
+    },
+    {
+      "endpoint": "Auth Test POST",
+      "path": "/auth-test/",
+      "method": "POST",
+      "status_code": 200,
+      "response_data": {
+        "method": "POST",
+        "path": "/auth-test/",
+        "identity_key": "unknown",
+        "authenticated": false,
+        "certificates": {
+          "count": 0,
+          "certificates": []
+        },
+        "payment": null,
+        "headers": {
+          "bsv_headers": {}
+        }
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130882"
+    },
+    {
+      "endpoint": "Auth Test with BSV Headers",
+      "path": "/auth-test/",
+      "method": "GET",
+      "status_code": 200,
+      "response_data": {
+        "method": "GET",
+        "path": "/auth-test/",
+        "identity_key": "unknown",
+        "authenticated": false,
+        "certificates": {
+          "count": 0,
+          "certificates": []
+        },
+        "payment": null,
+        "headers": {
+          "bsv_headers": {
+            "X-Bsv-Auth-Version": "1.0",
+            "X-Bsv-Auth-Identity-Key": "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8",
+            "X-Bsv-Auth-Nonce": "test_nonce_12345"
+          }
+        }
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.130966"
+    },
+    {
+      "endpoint": "Auth Test with Payment",
+      "path": "/auth-test/",
+      "method": "GET",
+      "status_code": 200,
+      "response_data": {
+        "method": "GET",
+        "path": "/auth-test/",
+        "identity_key": "unknown",
+        "authenticated": false,
+        "certificates": {
+          "count": 0,
+          "certificates": []
+        },
+        "payment": null,
+        "headers": {
+          "bsv_headers": {
+            "X-Bsv-Auth-Version": "1.0",
+            "X-Bsv-Auth-Identity-Key": "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8",
+            "X-Bsv-Auth-Nonce": "test_nonce_12345",
+            "X-Bsv-Payment": "{\"derivationPrefix\": \"test_prefix\", \"satoshis\": 1000, \"transaction\": \"test_tx_123\"}"
+          }
+        }
+      },
+      "success": true,
+      "timestamp": "2025-08-29T02:53:55.131033"
+    }
+  ],
+  "timestamp": "2025-08-29T02:53:55.131109"
+}

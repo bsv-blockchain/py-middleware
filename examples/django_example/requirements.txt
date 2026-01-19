@@ -1,0 +1,11 @@
+# Requirements for BSV Middleware Django Example
+
+# Django
+Django>=4.2.0,<5.0.0
+
+# BSV Middleware (local development version)
+-e ../../
+
+# Development dependencies
+pytest>=7.0.0
+pytest-django>=4.5.0
