@@ -2,9 +2,9 @@ name: build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   test:
@@ -69,8 +69,8 @@ jobs:
       run: |
         python update_coverage.py ${{ steps.coverage.outputs.coverage }}
 
-    - name: Commit and push updated coverage badge (push to master only)
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master' && matrix.python-version == '3.11'
+    - name: Commit and push updated coverage badge (push to main only)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.python-version == '3.11'
       run: |
         # Only proceed if README.md has changes
         if git diff --quiet README.md; then
@@ -107,7 +107,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: release
     permissions:
       id-token: write
