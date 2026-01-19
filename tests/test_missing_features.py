@@ -18,9 +18,6 @@ import pytest
 from django.test import RequestFactory
 from django.conf import settings
 from django.http import JsonResponse
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from threading import Thread
-import time
 
 # py-sdk imports
 from bsv.wallet import ProtoWallet
@@ -32,7 +29,7 @@ from examples.django_example.adapter.payment_middleware_complete import BSVPayme
 from examples.django_example.adapter.utils import (
     get_identity_key,
     is_authenticated_request,
-    get_request_auth_info
+    get_request_auth_info,
 )
 from bsv_middleware.types import AuthInfo
 
@@ -51,15 +48,13 @@ class TestCertificateExpanded:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key,
-            permission_callback=lambda action: True,
-            load_env=False
+            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
         )
         self.factory = RequestFactory()
 
         settings.BSV_MIDDLEWARE = {
-            'WALLET': self.wallet,
-            'ALLOW_UNAUTHENTICATED': False,
+            "WALLET": self.wallet,
+            "ALLOW_UNAUTHENTICATED": False,
         }
 
     @pytest.mark.django_db
@@ -74,15 +69,18 @@ class TestCertificateExpanded:
         # In a real implementation, this would request specific certificate types
 
         requested_certificates = {
-            'certifiers': ['03caa1baafa05ecbf1a5b310a7a0b00bc1633f56267d9f67b1fd6bb23b3ef1abfa'],
-            'types': {'z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=': ['firstName']}
+            "certifiers": ["03caa1baafa05ecbf1a5b310a7a0b00bc1633f56267d9f67b1fd6bb23b3ef1abfa"],
+            "types": {"z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=": ["firstName"]},
         }
 
         # Mock certificate request handling
         # In real implementation, this would use AuthFetch.sendCertificateRequest
-        assert requested_certificates['certifiers']
-        assert 'z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=' in requested_certificates['types']
-        assert 'firstName' in requested_certificates['types']['z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=']
+        assert requested_certificates["certifiers"]
+        assert "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=" in requested_certificates["types"]
+        assert (
+            "firstName"
+            in requested_certificates["types"]["z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="]
+        )
 
         print("✅ Certificate request with type filtering validated")
 
@@ -93,12 +91,12 @@ class TestCertificateExpanded:
 
         Tests requesting specific fields from certificates
         """
-        requested_fields = ['firstName', 'lastName', 'email']
+        requested_fields = ["firstName", "lastName", "email"]
 
         # Validate field request structure
         assert all(isinstance(field, str) for field in requested_fields)
-        assert 'firstName' in requested_fields
-        assert 'lastName' in requested_fields
+        assert "firstName" in requested_fields
+        assert "lastName" in requested_fields
 
         print("✅ Certificate field requests validated")
 
@@ -110,32 +108,36 @@ class TestCertificateExpanded:
         Equivalent to TypeScript Test 16: Certificate-protected endpoint
         Tests that endpoints can require specific certificates for access
         """
+
         def cert_protected_view(request):
             # Check if request has required certificates
-            if hasattr(request, 'bsv_certificates'):
-                return JsonResponse({'access': 'granted', 'certificates': 'verified'})
-            return JsonResponse({'access': 'denied'}, status=403)
+            if hasattr(request, "bsv_certificates"):
+                return JsonResponse({"access": "granted", "certificates": "verified"})
+            return JsonResponse({"access": "denied"}, status=403)
 
         middleware = BSVAuthMiddleware(cert_protected_view)
 
         # Create request with mock certificate data
         request = self.factory.post(
-            '/cert-protected',
-            data=json.dumps({'message': 'Hello protected route!'}),
-            content_type='application/json'
+            "/cert-protected",
+            data=json.dumps({"message": "Hello protected route!"}),
+            content_type="application/json",
         )
 
         # Add session
         from django.contrib.sessions.middleware import SessionMiddleware
+
         session_middleware = SessionMiddleware(cert_protected_view)
         session_middleware.process_request(request)
         request.session.save()
 
         # Mock certificate attachment
-        request.bsv_certificates = [{
-            'type': 'z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=',
-            'fields': {'firstName': 'Alice'}
-        }]
+        request.bsv_certificates = [
+            {
+                "type": "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=",
+                "fields": {"firstName": "Alice"},
+            }
+        ]
 
         try:
             response = middleware(request)
@@ -159,15 +161,13 @@ class TestServerRestartPersistence:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key,
-            permission_callback=lambda action: True,
-            load_env=False
+            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
         )
         self.factory = RequestFactory()
 
         settings.BSV_MIDDLEWARE = {
-            'WALLET': self.wallet,
-            'ALLOW_UNAUTHENTICATED': False,
+            "WALLET": self.wallet,
+            "ALLOW_UNAUTHENTICATED": False,
         }
 
     @pytest.mark.django_db
@@ -178,24 +178,34 @@ class TestServerRestartPersistence:
         Equivalent to TypeScript Test 12: Server restart mid-test
         Simulates server restart by clearing session cache and re-authenticating
         """
+
         def dummy_view(request):
-            return JsonResponse({
-                'session_id': request.session.session_key if hasattr(request, 'session') else None,
-                'authenticated': hasattr(request, 'bsv_auth'),
-                'identity': getattr(request.bsv_auth, 'identity_key', None) if hasattr(request, 'bsv_auth') else None
-            })
+            return JsonResponse(
+                {
+                    "session_id": (
+                        request.session.session_key if hasattr(request, "session") else None
+                    ),
+                    "authenticated": hasattr(request, "bsv_auth"),
+                    "identity": (
+                        getattr(request.bsv_auth, "identity_key", None)
+                        if hasattr(request, "bsv_auth")
+                        else None
+                    ),
+                }
+            )
 
         middleware = BSVAuthMiddleware(dummy_view)
 
         identity_key = self.private_key.public_key().serialize().hex()
         auth_headers = {
-            'HTTP_X_BSV_AUTH_IDENTITY_KEY': identity_key,
-            'HTTP_X_BSV_AUTH_SIGNATURE': 'mock_signature',
+            "HTTP_X_BSV_AUTH_IDENTITY_KEY": identity_key,
+            "HTTP_X_BSV_AUTH_SIGNATURE": "mock_signature",
         }
 
         # First request (before "restart")
-        request1 = self.factory.get('/test', **auth_headers)
+        request1 = self.factory.get("/test", **auth_headers)
         from django.contrib.sessions.middleware import SessionMiddleware
+
         session_middleware = SessionMiddleware(dummy_view)
         session_middleware.process_request(request1)
         request1.session.save()
@@ -203,16 +213,20 @@ class TestServerRestartPersistence:
 
         try:
             response1 = middleware(request1)
-            print(f"  Before restart - Status: {response1.status_code}, Session: {session_key_before}")
+            print(
+                f"  Before restart - Status: {response1.status_code}, Session: {session_key_before}"
+            )
 
             # Simulate server restart by creating new request with same session key
             # In real scenario, session data would be persisted
-            request2 = self.factory.get('/test', **auth_headers)
+            request2 = self.factory.get("/test", **auth_headers)
             session_middleware.process_request(request2)
             request2.session._session_key = session_key_before  # Reuse session
 
             response2 = middleware(request2)
-            print(f"  After restart - Status: {response2.status_code}, Session: {session_key_before}")
+            print(
+                f"  After restart - Status: {response2.status_code}, Session: {session_key_before}"
+            )
 
             # Both requests should have same session key
             assert session_key_before == request2.session.session_key
@@ -239,9 +253,7 @@ class TestIdentityContextExpanded:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key,
-            permission_callback=lambda action: True,
-            load_env=False
+            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
         )
         self.factory = RequestFactory()
 
@@ -250,27 +262,27 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_get_identity_missing(self):
         """Test get_identity_key with missing identity"""
-        request = self.factory.get('/test')
+        request = self.factory.get("/test")
         identity_key = get_identity_key(request)
-        assert identity_key == 'unknown'
+        assert identity_key == "unknown"
         print("✅ Get identity with missing identity returns 'unknown'")
 
     @pytest.mark.django_db
     def test_get_identity_unknown(self):
         """Test get_identity_key with unknown identity (no auth attribute)"""
-        request = self.factory.get('/test')
+        request = self.factory.get("/test")
         # Request has no auth attribute
         identity_key = get_identity_key(request)
-        assert identity_key == 'unknown'
+        assert identity_key == "unknown"
         print("✅ Get identity with unknown identity returns 'unknown'")
 
     @pytest.mark.django_db
     def test_get_identity_authenticated(self):
         """Test get_identity_key with authenticated identity"""
-        request = self.factory.get('/test')
-        request.auth = AuthInfo(identity_key='02abcd1234')
+        request = self.factory.get("/test")
+        request.auth = AuthInfo(identity_key="02abcd1234")
         identity_key = get_identity_key(request)
-        assert identity_key == '02abcd1234'
+        assert identity_key == "02abcd1234"
         print("✅ Get identity with authenticated identity returns correct key")
 
     # Group 2: Get Authenticated Identity Tests (3 tests)
@@ -278,7 +290,7 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_get_authenticated_identity_missing(self):
         """Test get_request_auth_info with missing identity"""
-        request = self.factory.get('/test')
+        request = self.factory.get("/test")
         result = get_request_auth_info(request)
         # Should return None
         assert result is None
@@ -287,7 +299,7 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_get_authenticated_identity_unknown(self):
         """Test get_request_auth_info with unknown identity"""
-        request = self.factory.get('/test')
+        request = self.factory.get("/test")
         request.auth = None  # Explicitly set to None (unknown)
         result = get_request_auth_info(request)
         assert result is None
@@ -296,10 +308,10 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_get_authenticated_identity_authenticated(self):
         """Test get_request_auth_info with authenticated identity"""
-        request = self.factory.get('/test')
-        request.auth = AuthInfo(identity_key='02xyz5678')
+        request = self.factory.get("/test")
+        request.auth = AuthInfo(identity_key="02xyz5678")
         result = get_request_auth_info(request)
-        assert result is not None and result.identity_key == '02xyz5678'
+        assert result is not None and result.identity_key == "02xyz5678"
         print("✅ Get authenticated identity with authenticated identity returns correct value")
 
     # Group 3: Is Not Authenticated Tests (3 tests)
@@ -307,7 +319,7 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_is_not_authenticated_missing(self):
         """Test is_authenticated_request with missing identity"""
-        request = self.factory.get('/test')
+        request = self.factory.get("/test")
         is_auth = is_authenticated_request(request)
         assert not is_auth
         print("✅ Is authenticated with missing identity returns False")
@@ -315,7 +327,7 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_is_not_authenticated_unknown(self):
         """Test is_authenticated_request with unknown identity"""
-        request = self.factory.get('/test')
+        request = self.factory.get("/test")
         request.auth = None  # Unknown identity
         is_auth = is_authenticated_request(request)
         assert not is_auth
@@ -324,8 +336,8 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_is_authenticated_true(self):
         """Test is_authenticated_request with authenticated identity"""
-        request = self.factory.get('/test')
-        request.auth = AuthInfo(identity_key='02valid123')
+        request = self.factory.get("/test")
+        request.auth = AuthInfo(identity_key="02valid123")
         is_auth = is_authenticated_request(request)
         assert is_auth
         print("✅ Is authenticated with authenticated identity returns True")
@@ -335,7 +347,7 @@ class TestIdentityContextExpanded:
     @pytest.mark.django_db
     def test_identity_key_format_validation(self):
         """Test identity key format validation"""
-        request = self.factory.get('/test')
+        request = self.factory.get("/test")
         # Valid hex format identity key
         valid_key = self.private_key.public_key().serialize().hex()
         request.auth = AuthInfo(identity_key=valid_key)
@@ -348,23 +360,23 @@ class TestIdentityContextExpanded:
     def test_identity_extraction_from_headers(self):
         """Test identity extraction from BSV headers"""
         identity_key = self.private_key.public_key().serialize().hex()
-        request = self.factory.get('/test', HTTP_X_BSV_AUTH_IDENTITY_KEY=identity_key)
+        request = self.factory.get("/test", HTTP_X_BSV_AUTH_IDENTITY_KEY=identity_key)
         # Header should be extractable
-        assert request.META.get('HTTP_X_BSV_AUTH_IDENTITY_KEY') == identity_key
+        assert request.META.get("HTTP_X_BSV_AUTH_IDENTITY_KEY") == identity_key
         print(f"✅ Identity extraction from headers: {identity_key[:20]}...")
 
     @pytest.mark.django_db
     def test_identity_persistence_across_middleware(self):
         """Test identity persistence across middleware chain"""
-        request = self.factory.get('/test')
-        request.auth = AuthInfo(identity_key='02persist123')
+        request = self.factory.get("/test")
+        request.auth = AuthInfo(identity_key="02persist123")
 
         # Identity should persist through middleware chain
         identity_before = get_identity_key(request)
         # Simulate middleware processing
         identity_after = get_identity_key(request)
 
-        assert identity_before == identity_after == '02persist123'
+        assert identity_before == identity_after == "02persist123"
         print("✅ Identity persists across middleware chain")
 
 
@@ -383,15 +395,13 @@ class TestContentTypeVariations:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key,
-            permission_callback=lambda action: True,
-            load_env=False
+            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
         )
         self.factory = RequestFactory()
 
         settings.BSV_MIDDLEWARE = {
-            'WALLET': self.wallet,
-            'ALLOW_UNAUTHENTICATED': False,
+            "WALLET": self.wallet,
+            "ALLOW_UNAUTHENTICATED": False,
         }
 
     @pytest.mark.django_db
@@ -402,19 +412,21 @@ class TestContentTypeVariations:
         Equivalent to TypeScript Test 13: charset injection normalization
         Tests Content-Type: application/json; charset=utf-8
         """
+
         def dummy_view(request):
-            return JsonResponse({'received': True})
+            return JsonResponse({"received": True})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
         # Request with charset in Content-Type
         request = self.factory.post(
-            '/test',
-            data=json.dumps({'message': 'Testing charset injection'}),
-            content_type='application/json; charset=utf-8'
+            "/test",
+            data=json.dumps({"message": "Testing charset injection"}),
+            content_type="application/json; charset=utf-8",
         )
 
         from django.contrib.sessions.middleware import SessionMiddleware
+
         session_middleware = SessionMiddleware(dummy_view)
         session_middleware.process_request(request)
         request.session.save()
@@ -422,7 +434,7 @@ class TestContentTypeVariations:
         try:
             response = middleware(request)
             print(f"✅ Charset injection test: {response.status_code}")
-            print(f"   Content-Type: application/json; charset=utf-8")
+            print("   Content-Type: application/json; charset=utf-8")
             assert response.status_code in [200, 401]
         except Exception as e:
             print(f"⚠️  Charset injection test: {e}")
@@ -435,24 +447,21 @@ class TestContentTypeVariations:
 
         Equivalent to TypeScript Test 9: Large binary upload
         """
+
         def dummy_view(request):
-            return JsonResponse({
-                'received': True,
-                'size': len(request.body)
-            })
+            return JsonResponse({"received": True, "size": len(request.body)})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
         # Create large binary data (10KB)
-        large_binary = b'X' * 10240
+        large_binary = b"X" * 10240
 
         request = self.factory.post(
-            '/upload',
-            data=large_binary,
-            content_type='application/octet-stream'
+            "/upload", data=large_binary, content_type="application/octet-stream"
         )
 
         from django.contrib.sessions.middleware import SessionMiddleware
+
         session_middleware = SessionMiddleware(dummy_view)
         session_middleware.process_request(request)
         request.session.save()
@@ -473,18 +482,17 @@ class TestContentTypeVariations:
 
         Matches Go's explicit test: POST request without body
         """
+
         def dummy_view(request):
-            return JsonResponse({
-                'method': request.method,
-                'has_body': len(request.body) > 0
-            })
+            return JsonResponse({"method": request.method, "has_body": len(request.body) > 0})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
         # POST with no body
-        request = self.factory.post('/test')
+        request = self.factory.post("/test")
 
         from django.contrib.sessions.middleware import SessionMiddleware
+
         session_middleware = SessionMiddleware(dummy_view)
         session_middleware.process_request(request)
         request.session.save()
@@ -512,15 +520,13 @@ class TestHTTPMethodVariations:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key,
-            permission_callback=lambda action: True,
-            load_env=False
+            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
         )
         self.factory = RequestFactory()
 
         settings.BSV_MIDDLEWARE = {
-            'WALLET': self.wallet,
-            'ALLOW_UNAUTHENTICATED': False,
+            "WALLET": self.wallet,
+            "ALLOW_UNAUTHENTICATED": False,
         }
 
     @pytest.mark.django_db
@@ -530,14 +536,16 @@ class TestHTTPMethodVariations:
 
         Matches Go: GET request on path (/ping)
         """
+
         def ping_view(request):
-            return JsonResponse({'ping': 'pong', 'path': request.path})
+            return JsonResponse({"ping": "pong", "path": request.path})
 
         middleware = BSVAuthMiddleware(ping_view)
 
-        request = self.factory.get('/ping')
+        request = self.factory.get("/ping")
 
         from django.contrib.sessions.middleware import SessionMiddleware
+
         session_middleware = SessionMiddleware(ping_view)
         session_middleware.process_request(request)
         request.session.save()
@@ -545,7 +553,7 @@ class TestHTTPMethodVariations:
         try:
             response = middleware(request)
             print(f"✅ GET on specific path (/ping) test: {response.status_code}")
-            assert request.path == '/ping'
+            assert request.path == "/ping"
             assert response.status_code in [200, 401]
         except Exception as e:
             print(f"⚠️  GET on specific path test: {e}")
@@ -558,26 +566,25 @@ class TestHTTPMethodVariations:
 
         Matches TypeScript: Request ID tracking in BSV headers
         """
+
         def dummy_view(request):
-            return JsonResponse({'received': True})
+            return JsonResponse({"received": True})
 
         middleware = BSVAuthMiddleware(dummy_view)
 
         # Add request ID to headers
-        request_id = 'test_request_id_12345'
-        request = self.factory.get(
-            '/test',
-            HTTP_X_BSV_AUTH_REQUEST_ID=request_id
-        )
+        request_id = "test_request_id_12345"
+        request = self.factory.get("/test", HTTP_X_BSV_AUTH_REQUEST_ID=request_id)
 
         from django.contrib.sessions.middleware import SessionMiddleware
+
         session_middleware = SessionMiddleware(dummy_view)
         session_middleware.process_request(request)
         request.session.save()
 
         try:
             # Verify request ID is in headers
-            assert request.META.get('HTTP_X_BSV_AUTH_REQUEST_ID') == request_id
+            assert request.META.get("HTTP_X_BSV_AUTH_REQUEST_ID") == request_id
             print(f"✅ Request ID tracking test: {request_id}")
 
             response = middleware(request)
@@ -600,9 +607,7 @@ class TestPaymentMiddlewareConfiguration:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key,
-            permission_callback=lambda action: True,
-            load_env=False
+            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
         )
         self.factory = RequestFactory()
 
@@ -613,23 +618,25 @@ class TestPaymentMiddlewareConfiguration:
 
         Matches Go: Should return error when payment middleware is setup without auth middleware
         """
+
         def dummy_view(request):
-            return JsonResponse({'ok': True})
+            return JsonResponse({"ok": True})
 
         # Try to create payment middleware without auth middleware in config
         try:
             settings.BSV_MIDDLEWARE = {
-                'WALLET': self.wallet,
-                'PRICING_CALCULATOR': lambda req: 100,  # Payment required
+                "WALLET": self.wallet,
+                "PRICING_CALCULATOR": lambda req: 100,  # Payment required
                 # Missing: auth middleware or ALLOW_UNAUTHENTICATED
             }
 
             # Payment middleware should validate that auth is configured
             payment_middleware = BSVPaymentMiddleware(dummy_view)
 
-            request = self.factory.get('/paid-endpoint')
+            request = self.factory.get("/paid-endpoint")
 
             from django.contrib.sessions.middleware import SessionMiddleware
+
             session_middleware = SessionMiddleware(dummy_view)
             session_middleware.process_request(request)
             request.session.save()

@@ -10,7 +10,7 @@ from .transport import DjangoTransport, create_django_transport
 from .session_manager import (
     DjangoSessionManager,
     DjangoSessionManagerAdapter,
-    create_django_session_manager
+    create_django_session_manager,
 )
 
 __all__ = [
@@ -22,4 +22,3 @@ __all__ = [
     "DjangoSessionManagerAdapter",
     "create_django_session_manager",
 ]
-

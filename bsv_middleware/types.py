@@ -12,6 +12,7 @@ from django.http import HttpRequest, HttpResponse
 
 class LogLevel(str, Enum):
     """Log levels for BSV middleware"""
+
     DEBUG = "debug"
     INFO = "info"
     WARN = "warn"
@@ -42,14 +43,15 @@ ERR_SERVER_MISCONFIGURED = "ERR_SERVER_MISCONFIGURED"
 @dataclass
 class AuthInfo:
     """Authentication information for BSV requests"""
-    identity_key: str = 'unknown'
+
+    identity_key: str = "unknown"
     certificates: Optional[List[Any]] = None
-    
+
     @property
     def is_authenticated(self) -> bool:
         """Check if request is authenticated"""
-        return self.identity_key != 'unknown'
-    
+        return self.identity_key != "unknown"
+
     @property
     def has_certificates(self) -> bool:
         """Check if certificates are available"""
@@ -59,16 +61,17 @@ class AuthInfo:
 @dataclass
 class PaymentInfo:
     """Payment information for BSV requests"""
+
     satoshis_paid: int = 0
     accepted: bool = False
     transaction_id: Optional[str] = None
     derivation_prefix: Optional[str] = None
-    
+
     @property
     def is_paid(self) -> bool:
         """Check if payment was successfully processed"""
         return self.satoshis_paid > 0 and self.accepted
-    
+
     @property
     def is_free(self) -> bool:
         """Check if this is a free request"""
@@ -78,18 +81,19 @@ class PaymentInfo:
 @dataclass
 class BSVPayment:
     """BSV payment data structure
-    
+
     Compatible with Express/Go BSVPayment interface:
     - derivationPrefix: string
     - derivationSuffix: string
     - transaction: base64 encoded transaction
     """
+
     derivation_prefix: str
     derivation_suffix: str = ""
     satoshis: int = 0
     transaction: Optional[str] = None  # base64 encoded transaction
     sender_identity_key: Optional[str] = None  # For internalize_action
-    
+
     def __post_init__(self) -> None:
         """Validate payment data after initialization"""
         if self.satoshis < 0:
@@ -100,15 +104,15 @@ class BSVPayment:
 
 class WalletInterface(Protocol):
     """Protocol for BSV wallet implementations"""
-    
+
     def sign_message(self, message: bytes) -> bytes:
         """Sign a message with the wallet"""
         ...
-    
+
     def get_public_key(self) -> str:
         """Get the wallet's public key"""
         ...
-    
+
     def internalize_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
         """Process an action (transaction) with the wallet"""
         ...
@@ -116,27 +120,22 @@ class WalletInterface(Protocol):
 
 class SessionManagerInterface(Protocol):
     """Protocol for session managers"""
-    
+
     def has_session(self, identity_key: str) -> bool:
         """Check if a session exists for the identity key"""
         ...
 
 
 # Type aliases for callbacks
-CertificatesReceivedCallback = Callable[
-    [str, List[Any], HttpRequest, HttpResponse],
-    None
-]
+CertificatesReceivedCallback = Callable[[str, List[Any], HttpRequest, HttpResponse], None]
 
-CalculateRequestPriceCallback = Callable[
-    [HttpRequest],
-    Union[int, float]
-]
+CalculateRequestPriceCallback = Callable[[HttpRequest], Union[int, float]]
 
 
 @dataclass
 class AuthMiddlewareOptions:
     """Configuration options for authentication middleware"""
+
     wallet: WalletInterface
     session_manager: Optional[SessionManagerInterface] = None
     allow_unauthenticated: bool = False
@@ -144,19 +143,20 @@ class AuthMiddlewareOptions:
     on_certificates_received: Optional[CertificatesReceivedCallback] = None
     logger: Optional[Any] = None
     log_level: LogLevel = LogLevel.INFO
-    
+
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
-        if not hasattr(self.wallet, 'sign_message'):
+        if not hasattr(self.wallet, "sign_message"):
             raise ValueError("wallet must implement WalletInterface")
 
 
 @dataclass
 class PaymentMiddlewareOptions:
     """Configuration options for payment middleware"""
+
     wallet: WalletInterface
     calculate_request_price: CalculateRequestPriceCallback
-    
+
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
         if not callable(self.calculate_request_price):
@@ -166,6 +166,7 @@ class PaymentMiddlewareOptions:
 # Legacy compatibility - keeping old class names for backwards compatibility
 class BSVHeaders:
     """BSV-specific HTTP headers (legacy compatibility)"""
+
     AUTH_PREFIX = BSV_AUTH_PREFIX
     PAYMENT = BSV_PAYMENT_HEADER
     PAYMENT_VERSION = BSV_PAYMENT_VERSION_HEADER
@@ -176,6 +177,7 @@ class BSVHeaders:
 
 class BSVErrorCodes:
     """BSV middleware error codes (legacy compatibility)"""
+
     ERR_INVALID_AUTH = ERR_INVALID_AUTH
     ERR_MISSING_CERTIFICATES = ERR_MISSING_CERTIFICATES
     ERR_PAYMENT_REQUIRED = ERR_PAYMENT_REQUIRED
