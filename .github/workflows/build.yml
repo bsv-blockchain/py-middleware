@@ -14,21 +14,22 @@ jobs:
       pull-requests: write
       contents: write
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: [ "3.10", "3.11", "3.12" ]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       with:
         fetch-depth: 0  # Fetch all history for all branches and tags
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache pip packages
-      uses: actions/cache@v3
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -49,7 +50,7 @@ jobs:
         echo "Running black..."
         black --check bsv_middleware/ tests/
         echo "Running ruff..."
-        ruff check bsv_middleware/ tests/ || echo "ruff not installed, skipping"
+        ruff check bsv_middleware/ tests/
 
     - name: Run tests with coverage
       run: |
@@ -59,34 +60,39 @@ jobs:
       id: coverage
       run: |
         # Extract coverage percentage from coverage.json
-        COVERAGE=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+        COVERAGE=$(python -c "import json; data=json.load(open(\'coverage.json\')); print(f\"{data[\'totals\'][\'percent_covered\']:.1f}\")")
         echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
         echo "Coverage: $COVERAGE%"
 
-    - name: Update coverage badge (PRs targeting master only)
-      if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && matrix.python-version == '3.11'
+    - name: Update coverage badge
+      if: matrix.python-version == '3.11'
       run: |
         python update_coverage.py ${{ steps.coverage.outputs.coverage }}
 
-    - name: Commit coverage update
-      if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && matrix.python-version == '3.11'
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: "chore: update coverage badge to ${{ steps.coverage.outputs.coverage }}%"
-        file_pattern: README.md
-        commit_user_name: github-actions[bot]
-        commit_user_email: github-actions[bot]@users.noreply.github.com
+    - name: Commit and push updated coverage badge (push to master only)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master' && matrix.python-version == '3.11'
+      run: |
+        # Only proceed if README.md has changes
+        if git diff --quiet README.md; then
+          echo "No coverage badge changes to commit."
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add README.md
+        git commit -m "chore: update coverage badge to ${{ steps.coverage.outputs.coverage }}% [skip ci]" || echo "No changes to commit."
+        git push
 
     - name: Upload coverage reports
       if: matrix.python-version == '3.11'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
       with:
         name: coverage-report
         path: htmlcov/
 
     - name: Comment PR with coverage
       if: github.event_name == 'pull_request' && matrix.python-version == '3.11'
-      uses: actions/github-script@v7
+      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
       with:
         script: |
           const coverage = '${{ steps.coverage.outputs.coverage }}';
@@ -98,3 +104,38 @@ jobs:
             body: comment
           });
 
+  publish:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-build
+
+      - name: Install build dependencies
+        run: python -m pip install --upgrade pip build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check distribution
+        run: |
+          python -m pip install twine
+          twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e

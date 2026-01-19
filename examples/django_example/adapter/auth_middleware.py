@@ -6,26 +6,22 @@ directly ported from Express createAuthMiddleware() function.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
 from bsv_middleware.types import (
-    WalletInterface,
     AuthMiddlewareOptions,
-    LogLevel,
-    CertificatesReceivedCallback,
-    AuthInfo,
-    BSVErrorCodes
+    LogLevel
 )
 from bsv_middleware.exceptions import (
     BSVAuthException,
     BSVServerMisconfiguredException
 )
-from bsv_middleware.py_sdk_bridge import PySdkBridge, create_py_sdk_bridge
-from .transport import DjangoTransport, create_django_transport
-from .session_manager import DjangoSessionManager, create_django_session_manager
+from bsv_middleware.py_sdk_bridge import create_py_sdk_bridge
+from .transport import create_django_transport
+from .session_manager import create_django_session_manager
 
 logger = logging.getLogger(__name__)
 
@@ -295,7 +291,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
             
             # Check if this request has x-bsv-auth headers (general message)
             if not request.headers.get('x-bsv-auth-version'):
-                logger.warning(f"[AUTH MIDDLEWARE process_response] No x-bsv-auth-version header, skipping")
+                logger.warning("[AUTH MIDDLEWARE process_response] No x-bsv-auth-version header, skipping")
                 return response
             
             # Check if this is an authenticated request with general message
@@ -307,10 +303,10 @@ class BSVAuthMiddleware(MiddlewareMixin):
             # This prevents regular API responses from being incorrectly processed as auth messages by the client
             is_auth_response = hasattr(request, '_bsv_auth_response')
             if is_auth_response:
-                logger.warning(f"[AUTH MIDDLEWARE process_response] Adding auth headers to auth endpoint response")
+                logger.warning("[AUTH MIDDLEWARE process_response] Adding auth headers to auth endpoint response")
                 response = self._add_auth_response_headers(request, response)
             else:
-                logger.warning(f"[AUTH MIDDLEWARE process_response] Adding auth headers (without message-type) to API response")
+                logger.warning("[AUTH MIDDLEWARE process_response] Adding auth headers (without message-type) to API response")
                 # Add auth headers but omit message-type to prevent client from processing as auth message
                 response['x-bsv-auth-version'] = '0.1'
                 if hasattr(request, 'auth') and request.auth and hasattr(request.auth, 'identity_key'):
@@ -537,7 +533,7 @@ class BSVAuthMiddleware(MiddlewareMixin):
             return self.custom_session_manager
         
         # Create Django session manager with py-sdk adapter
-        from .session_manager import DjangoSessionManagerAdapter, create_django_session_manager
+        from .session_manager import DjangoSessionManagerAdapter
         django_sm = create_django_session_manager(request.session)
         return DjangoSessionManagerAdapter(django_sm)
     

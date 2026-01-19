@@ -9,7 +9,7 @@ import logging
 from typing import Optional, Dict, Any
 from django.contrib.sessions.backends.base import SessionBase
 
-from bsv_middleware.types import SessionManagerInterface, PubKeyHex
+from bsv_middleware.types import PubKeyHex
 
 logger = logging.getLogger(__name__)
 

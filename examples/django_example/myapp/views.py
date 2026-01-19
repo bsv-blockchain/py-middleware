@@ -28,7 +28,6 @@ from examples.django_example.adapter.utils import (
     format_satoshis,
     bsv_authenticated_required,
     bsv_payment_required,
-    debug_request_info,
 )
 
 
@@ -92,7 +91,7 @@ def protected_endpoint(request):
         }, status=401)
     
     return JsonResponse({
-        'message': f'Hello, authenticated user!',
+        'message': 'Hello, authenticated user!',
         'identity_key': identity_key,
         'access': 'authenticated',
         'certificates_count': len(certificates),
