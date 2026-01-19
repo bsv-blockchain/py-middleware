@@ -14,24 +14,28 @@ This file implements missing tests identified in the cross-implementation compar
 """
 
 import json
+
 import pytest
-from django.test import RequestFactory
-from django.conf import settings
-from django.http import JsonResponse
+from bsv.keys import PrivateKey
 
 # py-sdk imports
 from bsv.wallet import ProtoWallet
-from bsv.keys import PrivateKey
+from django.conf import settings
+from django.http import JsonResponse
+from django.test import RequestFactory
+
+from bsv_middleware.types import AuthInfo
 
 # Middleware imports
 from examples.django_example.adapter import BSVAuthMiddleware
-from examples.django_example.adapter.payment_middleware_complete import BSVPaymentMiddleware
+from examples.django_example.adapter.payment_middleware_complete import (
+    BSVPaymentMiddleware,
+)
 from examples.django_example.adapter.utils import (
     get_identity_key,
-    is_authenticated_request,
     get_request_auth_info,
+    is_authenticated_request,
 )
-from bsv_middleware.types import AuthInfo
 
 
 class TestCertificateExpanded:
@@ -48,7 +52,9 @@ class TestCertificateExpanded:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
         self.factory = RequestFactory()
 
@@ -69,17 +75,24 @@ class TestCertificateExpanded:
         # In a real implementation, this would request specific certificate types
 
         requested_certificates = {
-            "certifiers": ["03caa1baafa05ecbf1a5b310a7a0b00bc1633f56267d9f67b1fd6bb23b3ef1abfa"],
+            "certifiers": [
+                "03caa1baafa05ecbf1a5b310a7a0b00bc1633f56267d9f67b1fd6bb23b3ef1abfa"
+            ],
             "types": {"z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=": ["firstName"]},
         }
 
         # Mock certificate request handling
         # In real implementation, this would use AuthFetch.sendCertificateRequest
         assert requested_certificates["certifiers"]
-        assert "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY=" in requested_certificates["types"]
+        assert (
+            "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="
+            in requested_certificates["types"]
+        )
         assert (
             "firstName"
-            in requested_certificates["types"]["z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="]
+            in requested_certificates["types"][
+                "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="
+            ]
         )
 
         print("✅ Certificate request with type filtering validated")
@@ -161,7 +174,9 @@ class TestServerRestartPersistence:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
         self.factory = RequestFactory()
 
@@ -183,7 +198,9 @@ class TestServerRestartPersistence:
             return JsonResponse(
                 {
                     "session_id": (
-                        request.session.session_key if hasattr(request, "session") else None
+                        request.session.session_key
+                        if hasattr(request, "session")
+                        else None
                     ),
                     "authenticated": hasattr(request, "bsv_auth"),
                     "identity": (
@@ -253,7 +270,9 @@ class TestIdentityContextExpanded:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
         self.factory = RequestFactory()
 
@@ -312,7 +331,9 @@ class TestIdentityContextExpanded:
         request.auth = AuthInfo(identity_key="02xyz5678")
         result = get_request_auth_info(request)
         assert result is not None and result.identity_key == "02xyz5678"
-        print("✅ Get authenticated identity with authenticated identity returns correct value")
+        print(
+            "✅ Get authenticated identity with authenticated identity returns correct value"
+        )
 
     # Group 3: Is Not Authenticated Tests (3 tests)
 
@@ -395,7 +416,9 @@ class TestContentTypeVariations:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
         self.factory = RequestFactory()
 
@@ -484,7 +507,9 @@ class TestContentTypeVariations:
         """
 
         def dummy_view(request):
-            return JsonResponse({"method": request.method, "has_body": len(request.body) > 0})
+            return JsonResponse(
+                {"method": request.method, "has_body": len(request.body) > 0}
+            )
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -520,7 +545,9 @@ class TestHTTPMethodVariations:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
         self.factory = RequestFactory()
 
@@ -607,7 +634,9 @@ class TestPaymentMiddlewareConfiguration:
         """Test setup"""
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
         self.factory = RequestFactory()
 
@@ -649,7 +678,9 @@ class TestPaymentMiddlewareConfiguration:
                 # If it doesn't error, it should at least deny access
                 print(f"   Response status: {response.status_code}")
             except Exception as e:
-                print(f"✅ Payment middleware correctly requires auth: {type(e).__name__}")
+                print(
+                    f"✅ Payment middleware correctly requires auth: {type(e).__name__}"
+                )
 
         except Exception as e:
             print(f"✅ Payment middleware configuration validation: {type(e).__name__}")

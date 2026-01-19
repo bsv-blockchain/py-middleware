@@ -4,12 +4,13 @@ Exception definitions for BSV Middleware
 Django-specific exceptions for BSV authentication and payment processing.
 """
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from .types import (
     ERR_INVALID_AUTH,
-    ERR_PAYMENT_REQUIRED,
-    ERR_MALFORMED_PAYMENT,
     ERR_INVALID_DERIVATION_PREFIX,
+    ERR_MALFORMED_PAYMENT,
+    ERR_PAYMENT_REQUIRED,
     ERR_SERVER_MISCONFIGURED,
 )
 
@@ -73,7 +74,10 @@ class BSVPaymentRequiredException(BSVPaymentException):
             **(details or {}),
         }
         super().__init__(
-            message=message, code=ERR_PAYMENT_REQUIRED, status_code=402, details=payment_details
+            message=message,
+            code=ERR_PAYMENT_REQUIRED,
+            status_code=402,
+            details=payment_details,
         )
         self.satoshis_required = satoshis_required
         self.derivation_prefix = derivation_prefix
@@ -88,7 +92,10 @@ class BSVMalformedPaymentException(BSVPaymentException):
         details: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
-            message=message, code=ERR_MALFORMED_PAYMENT, status_code=400, details=details
+            message=message,
+            code=ERR_MALFORMED_PAYMENT,
+            status_code=400,
+            details=details,
         )
 
 
@@ -101,7 +108,10 @@ class BSVInvalidDerivationPrefixException(BSVPaymentException):
         details: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
-            message=message, code=ERR_INVALID_DERIVATION_PREFIX, status_code=400, details=details
+            message=message,
+            code=ERR_INVALID_DERIVATION_PREFIX,
+            status_code=400,
+            details=details,
         )
 
 
@@ -109,8 +119,13 @@ class BSVServerMisconfiguredException(BSVMiddlewareException):
     """Server misconfiguration exception"""
 
     def __init__(
-        self, message: str = "The server is misconfigured", details: Optional[Dict[str, Any]] = None
+        self,
+        message: str = "The server is misconfigured",
+        details: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
-            message=message, code=ERR_SERVER_MISCONFIGURED, status_code=500, details=details
+            message=message,
+            code=ERR_SERVER_MISCONFIGURED,
+            status_code=500,
+            details=details,
         )

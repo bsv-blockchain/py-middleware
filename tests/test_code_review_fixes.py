@@ -30,7 +30,7 @@ class TestIssue5RuntimeCheckable:
         py_sdk_path = Path(__file__).parent.parent.parent / "py-sdk"
         wallet_interface_file = py_sdk_path / "bsv" / "wallet" / "wallet_interface.py"
 
-        with open(wallet_interface_file, "r") as f:
+        with open(wallet_interface_file) as f:
             content = f.read()
 
         # Check that @runtime_checkable is imported
@@ -49,7 +49,7 @@ class TestIssue5RuntimeCheckable:
         py_sdk_path = Path(__file__).parent.parent.parent / "py-sdk"
         wallet_interface_file = py_sdk_path / "bsv" / "wallet" / "wallet_interface.py"
 
-        with open(wallet_interface_file, "r") as f:
+        with open(wallet_interface_file) as f:
             content = f.read()
 
         # Find is_wallet_interface function
@@ -81,8 +81,9 @@ class TestIssue5RuntimeCheckable:
 
     def test_is_wallet_interface_functionality(self):
         """Test is_wallet_interface works correctly with duck typing."""
+        from typing import Any, Dict, Optional
+
         from bsv.wallet.wallet_interface import is_wallet_interface
-        from typing import Dict, Any, Optional
 
         # Create a wallet with all required methods
         class CompleteWallet:
@@ -96,7 +97,9 @@ class TestIssue5RuntimeCheckable:
             ) -> Dict:
                 return {"signature": []}
 
-            def create_action(self, args: Dict[str, Any], originator: Optional[str] = None) -> Dict:
+            def create_action(
+                self, args: Dict[str, Any], originator: Optional[str] = None
+            ) -> Dict:
                 return {}
 
             def internalize_action(
@@ -270,8 +273,9 @@ class TestIssue4ExceptionDocumentation:
 
     def test_get_public_key_has_exception_docs(self):
         """Verify get_public_key has exception documentation."""
-        from bsv.wallet.wallet_interface import WalletInterface
         import inspect
+
+        from bsv.wallet.wallet_interface import WalletInterface
 
         docstring = inspect.getdoc(WalletInterface.get_public_key)
 
@@ -284,8 +288,9 @@ class TestIssue4ExceptionDocumentation:
 
     def test_create_action_has_exception_docs(self):
         """Verify create_action has exception documentation."""
-        from bsv.wallet.wallet_interface import WalletInterface
         import inspect
+
+        from bsv.wallet.wallet_interface import WalletInterface
 
         docstring = inspect.getdoc(WalletInterface.create_action)
 
@@ -311,7 +316,11 @@ def test_code_review_fixes_summary(capsys):
         ("Issue #2", "Redundant assignment", "✅ Fixed (peer.py line 87 removed)"),
         ("Issue #3", "Silent exceptions", "✅ Fixed (_transport_ready flag added)"),
         ("Issue #4", "Exception docs", "✅ Fixed (comprehensive examples added)"),
-        ("Issue #5", "is_wallet_interface", "✅ Fixed (@runtime_checkable + isinstance)"),
+        (
+            "Issue #5",
+            "is_wallet_interface",
+            "✅ Fixed (@runtime_checkable + isinstance)",
+        ),
         ("Issue #6", "CamelCaseAdapter", "✅ Fixed (completely removed)"),
     ]
 

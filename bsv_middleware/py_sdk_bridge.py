@@ -8,14 +8,22 @@ py-sdk usage patterns.
 
 import json
 import logging
-from typing import Optional, Dict, Any, TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+
+from .exceptions import (
+    BSVAuthException,
+    BSVMalformedPaymentException,
+    BSVPaymentException,
+    BSVServerMisconfiguredException,
+)
+from .types import BSVPayment, WalletInterface
 
 # Import py-sdk modules with proper type checking support
 PY_SDK_AVAILABLE = False  # Initialize before conditional import
 
 if TYPE_CHECKING:
     # For type checking, always import the real types
-    from bsv.auth import Peer, PeerOptions, Transport, SessionManager
+    from bsv.auth import Peer, PeerOptions, SessionManager, Transport
     from bsv.auth.certificate import VerifiableCertificate
     from bsv.auth.requested_certificate_set import RequestedCertificateSet
     from bsv.auth.transports.transport import Transport as BaseTransport
@@ -23,7 +31,7 @@ if TYPE_CHECKING:
 else:
     # At runtime, try to import, fall back to Any if not available
     try:
-        from bsv.auth import Peer, PeerOptions, Transport, SessionManager
+        from bsv.auth import Peer, PeerOptions, SessionManager, Transport
         from bsv.auth.requested_certificate_set import RequestedCertificateSet
         from bsv.auth.transports.transport import Transport as BaseTransport
 
@@ -41,14 +49,6 @@ else:
         RequestedCertificateSet = Any  # type: ignore
         BaseTransport = Any  # type: ignore
         Wallet = Any  # type: ignore
-
-from .types import WalletInterface, BSVPayment
-from .exceptions import (
-    BSVAuthException,
-    BSVPaymentException,
-    BSVMalformedPaymentException,
-    BSVServerMisconfiguredException,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class PySdkBridge:
                     try:
                         # Get public key (handle both simple and py-sdk format)
                         if hasattr(self.wallet, "get_public_key"):
-                            if callable(getattr(self.wallet, "get_public_key")):
+                            if callable(self.wallet.get_public_key):
                                 # py-sdk format - might need arguments
                                 try:
                                     pub_key_result = self.wallet.get_public_key(
@@ -133,7 +133,7 @@ class PySdkBridge:
                                         if isinstance(pub_key_result, dict)
                                         else str(pub_key_result)
                                     )
-                                except:
+                                except Exception:
                                     # Simple format fallback
                                     pub_key = self.wallet.get_public_key()
                             else:
@@ -147,11 +147,15 @@ class PySdkBridge:
                         # Create deterministic but unique nonce
                         nonce_data = f"{pub_key}:{timestamp}:{random_part}"
                         nonce_hash = hashlib.sha256(nonce_data.encode()).hexdigest()
-                        logger.debug(f"Created deterministic nonce: {nonce_hash[:10]}...")
+                        logger.debug(
+                            f"Created deterministic nonce: {nonce_hash[:10]}..."
+                        )
                         return nonce_hash[:32]  # 32 character nonce
 
                     except Exception as key_error:
-                        logger.warning(f"Failed to use wallet key for nonce: {key_error}")
+                        logger.warning(
+                            f"Failed to use wallet key for nonce: {key_error}"
+                        )
                         # Fall through to random nonce
 
             # Fallback: secure random nonce
@@ -208,12 +212,16 @@ class PySdkBridge:
                 # Check if nonce is hexadecimal
                 try:
                     int(nonce, 16)
-                    logger.debug(f"Nonce verification passed (fallback): {nonce[:10]}...")
+                    logger.debug(
+                        f"Nonce verification passed (fallback): {nonce[:10]}..."
+                    )
                     return True
                 except ValueError:
                     # Check if nonce is alphanumeric (alternative valid format)
                     if nonce.replace("-", "").replace("_", "").isalnum():
-                        logger.debug(f"Nonce verification passed (alphanumeric): {nonce[:10]}...")
+                        logger.debug(
+                            f"Nonce verification passed (alphanumeric): {nonce[:10]}..."
+                        )
                         return True
 
                     logger.warning(f"Nonce format invalid: {nonce[:10]}...")
@@ -238,7 +246,9 @@ class PySdkBridge:
                 logger.debug(
                     f"[PY_SDK_BRIDGE] Processing real payment: {payment_data.satoshis} satoshis"
                 )
-                logger.debug(f"[PY_SDK_BRIDGE] Transaction hex: {payment_data.transaction[:40]}...")
+                logger.debug(
+                    f"[PY_SDK_BRIDGE] Transaction hex: {payment_data.transaction[:40]}..."
+                )
 
                 # TypeScript equivalent: wallet.internalizeAction with paymentRemittance
                 action = {
@@ -261,7 +271,9 @@ class PySdkBridge:
 
                 try:
                     # Call actual py-sdk wallet.internalize_action
-                    result = self.wallet.internalize_action(None, action, "payment_middleware")
+                    result = self.wallet.internalize_action(
+                        None, action, "payment_middleware"
+                    )
 
                     # Calculate actual TXID from transaction
                     import hashlib
@@ -349,7 +361,9 @@ class DjangoTransport(BaseTransport):
         """Set the peer instance."""
         self.peer = peer
 
-    def on_data(self, callback: Callable[[Any], Optional[Exception]]) -> Optional[Exception]:
+    def on_data(
+        self, callback: Callable[[Any], Optional[Exception]]
+    ) -> Optional[Exception]:
         """Set the message callback (message) -> Optional[Exception]."""
         self.message_callback = callback
         return None

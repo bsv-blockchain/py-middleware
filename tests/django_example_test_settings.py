@@ -105,7 +105,7 @@ class TestWallet:
         return {
             "accepted": True,
             "satoshisPaid": action.get("satoshis", 0),
-            "transactionId": f'test_tx_{action.get("satoshis", 0)}',
+            "transactionId": f"test_tx_{action.get('satoshis', 0)}",
         }
 
 
@@ -127,9 +127,10 @@ def calculate_test_request_price(request):
         return 100
 
 
-def handle_test_certificates_received(sender_public_key, certificates, request, response):
+def handle_test_certificates_received(
+    sender_public_key, certificates, request, response
+):
     """Test certificate handler"""
-    pass
 
 
 # BSV Middleware Settings
@@ -138,7 +139,9 @@ BSV_MIDDLEWARE = {
     "ALLOW_UNAUTHENTICATED": False,
     "CALCULATE_REQUEST_PRICE": calculate_test_request_price,
     "CERTIFICATE_REQUESTS": {
-        "certifiers": ["033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"],
+        "certifiers": [
+            "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"
+        ],
         "types": {"identity-verification": ["name", "address"]},
     },
     "ON_CERTIFICATES_RECEIVED": handle_test_certificates_received,

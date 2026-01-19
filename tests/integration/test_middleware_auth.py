@@ -7,14 +7,15 @@ Tests the integrated behavior of the Middleware, not py-sdk.
 """
 
 import json
+
 import pytest
-from django.test import Client, RequestFactory
-from django.conf import settings
-from django.http import HttpResponse, JsonResponse
+from bsv.keys import PrivateKey
 
 # py-sdk imports
 from bsv.wallet import ProtoWallet
-from bsv.keys import PrivateKey
+from django.conf import settings
+from django.http import HttpResponse, JsonResponse
+from django.test import Client, RequestFactory
 
 # Middleware imports
 from examples.django_example.adapter.auth_middleware import BSVAuthMiddleware
@@ -38,7 +39,9 @@ class TestMiddlewareAuthentication:
         # Create mock wallet (no testnet required)
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
 
         # Django test client
@@ -140,7 +143,10 @@ class TestMiddlewareAuthentication:
 
         def dummy_view(request):
             return JsonResponse(
-                {"status": "success", "data": dict(request.POST) if request.POST else None}
+                {
+                    "status": "success",
+                    "data": dict(request.POST) if request.POST else None,
+                }
             )
 
         middleware = BSVAuthMiddleware(dummy_view)
@@ -195,7 +201,9 @@ class TestMiddlewareAuthentication:
 
         # Plain text request
         request = self.factory.post(
-            "/api/endpoint", data="Hello, this is a plain text message!", content_type="text/plain"
+            "/api/endpoint",
+            data="Hello, this is a plain text message!",
+            content_type="text/plain",
         )
 
         # Add session
@@ -230,7 +238,9 @@ class TestMiddlewareAuthentication:
         print("Test 4: Binary POST Request")
 
         def dummy_view(request):
-            return JsonResponse({"status": "success", "received_bytes": len(request.body)})
+            return JsonResponse(
+                {"status": "success", "received_bytes": len(request.body)}
+            )
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -394,7 +404,9 @@ class TestMiddlewareAuthentication:
         print("Test 8: Request with Query Parameters")
 
         def dummy_view(request):
-            return JsonResponse({"status": "query received", "params": dict(request.GET)})
+            return JsonResponse(
+                {"status": "query received", "params": dict(request.GET)}
+            )
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -444,7 +456,9 @@ class TestMiddlewareAuthentication:
         middleware = BSVAuthMiddleware(dummy_view)
 
         # Request with custom headers
-        request = self.factory.get("/api/endpoint", HTTP_X_BSV_CUSTOM_HEADER="CustomHeaderValue")
+        request = self.factory.get(
+            "/api/endpoint", HTTP_X_BSV_CUSTOM_HEADER="CustomHeaderValue"
+        )
 
         # Add session
         from django.contrib.sessions.middleware import SessionMiddleware
@@ -512,7 +526,9 @@ class TestMiddlewareAuthentication:
         # Edge Case B: Empty body
         print("\n  📋 Edge Case B: Empty body")
         try:
-            request_b = self.factory.post("/api/endpoint", data="", content_type="application/json")
+            request_b = self.factory.post(
+                "/api/endpoint", data="", content_type="application/json"
+            )
             session_middleware.process_request(request_b)
             request_b.session.save()
 
@@ -533,7 +549,9 @@ class TestMiddlewareAuthentication:
 
         try:
             request_c = self.factory.post(
-                "/api/endpoint", data=json.dumps({"test": "data"}), content_type="application/json"
+                "/api/endpoint",
+                data=json.dumps({"test": "data"}),
+                content_type="application/json",
             )
             session_middleware.process_request(request_c)
             request_c.session.save()

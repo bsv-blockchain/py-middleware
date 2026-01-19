@@ -1,7 +1,7 @@
 """Test URL configuration."""
 
-from django.urls import path
 from django.http import JsonResponse
+from django.urls import path
 
 
 def test_view(request):

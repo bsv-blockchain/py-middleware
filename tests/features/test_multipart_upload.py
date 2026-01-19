@@ -5,22 +5,22 @@ This test suite validates the BSV middleware's ability to handle file uploads
 and multipart data while maintaining BSV authentication and payment functionality.
 """
 
-import pytest
 import json
-from django.test import TestCase, RequestFactory
-from django.core.files.uploadedfile import SimpleUploadedFile
 
-from examples.django_example.adapter.utils import (
-    get_multipart_data,
-    is_multipart_request,
-    get_uploaded_files,
-    get_multipart_fields,
-    handle_file_upload,
-    bsv_file_upload_required,
-    bsv_authenticated_required,
-)
+import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import RequestFactory, TestCase
 
 from examples.django_example.adapter.transport import DjangoTransport
+from examples.django_example.adapter.utils import (
+    bsv_authenticated_required,
+    bsv_file_upload_required,
+    get_multipart_data,
+    get_multipart_fields,
+    get_uploaded_files,
+    handle_file_upload,
+    is_multipart_request,
+)
 
 
 class TestMultipartFormDataSupport(TestCase):
@@ -58,8 +58,9 @@ class TestMultipartFormDataSupport(TestCase):
             fields = {}
 
         # Use Django's encode_multipart to properly format the request
-        from django.test.client import encode_multipart
         import uuid
+
+        from django.test.client import encode_multipart
 
         # Create boundary
         boundary = f"----WebKitFormBoundary{uuid.uuid4().hex[:16]}"
@@ -158,7 +159,8 @@ class TestMultipartFormDataSupport(TestCase):
             return {"status": "success", "files_count": len(request.multipart_files)}
 
         request = self._create_multipart_request(
-            files={"doc1": self.test_file, "doc2": self.test_image}, fields={"title": "Test Upload"}
+            files={"doc1": self.test_file, "doc2": self.test_image},
+            fields={"title": "Test Upload"},
         )
 
         result = test_view(request)
@@ -192,7 +194,10 @@ class TestMultipartFormDataSupport(TestCase):
         @bsv_file_upload_required
         def secure_upload_view(request):
             files = get_uploaded_files(request)
-            return {"identity": request.bsv_auth.identity_key, "files_received": len(files)}
+            return {
+                "identity": request.bsv_auth.identity_key,
+                "files_received": len(files),
+            }
 
         # Test successful authenticated file upload
         request = self._create_multipart_request(files={"file": self.test_file})
@@ -245,7 +250,9 @@ class TestBSVTransportMultipartIntegration(TestCase):
 
         # Mock py-sdk bridge
         self.mock_bridge = type(
-            "MockBridge", (), {"create_peer": lambda *args: None, "get_wallet": lambda: None}
+            "MockBridge",
+            (),
+            {"create_peer": lambda *args: None, "get_wallet": lambda: None},
         )()
 
         self.transport = DjangoTransport(
@@ -255,7 +262,9 @@ class TestBSVTransportMultipartIntegration(TestCase):
     def test_bsv_protocol_body_preservation(self):
         """Test that BSV protocol preserves raw body for signature verification"""
         # Create multipart request with test file
-        test_file = SimpleUploadedFile("test.txt", b"test content", content_type="text/plain")
+        test_file = SimpleUploadedFile(
+            "test.txt", b"test content", content_type="text/plain"
+        )
 
         request = self.factory.post(
             "/upload/",
@@ -321,7 +330,9 @@ class TestMultipartErrorHandling(TestCase):
             return {"status": "success"}
 
         # Create authenticated request with invalid multipart
-        request = self.factory.post("/upload/", "invalid data", content_type="multipart/form-data")
+        request = self.factory.post(
+            "/upload/", "invalid data", content_type="multipart/form-data"
+        )
         request.bsv_auth = type(
             "MockAuth", (), {"authenticated": True, "identity_key": "test_key"}
         )()

@@ -67,7 +67,11 @@ BSV_MIDDLEWARE = {
     "ALLOW_UNAUTHENTICATED": False,
     "REQUIRE_AUTH": False,  # Allow payment middleware without auth middleware
     "CALCULATE_REQUEST_PRICE": lambda request: (
-        500 if "/premium/" in request.path else 300 if "/decorator-payment/" in request.path else 0
+        500
+        if "/premium/" in request.path
+        else 300
+        if "/decorator-payment/" in request.path
+        else 0
     ),
     "LOG_LEVEL": "debug",
 }

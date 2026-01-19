@@ -39,7 +39,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[test,dev]
+        pip install -e .[dev]
         # Install local py-sdk if available
         if [ -d "../py-sdk" ]; then
           pip install -e ../py-sdk
@@ -103,7 +103,6 @@ jobs:
             repo: context.repo.repo,
             body: comment
           });
-
 
   publish:
     runs-on: ubuntu-latest

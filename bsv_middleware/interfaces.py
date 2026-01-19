@@ -9,7 +9,7 @@ All framework adapters must implement these interfaces to be compatible
 with the BSV middleware core functionality.
 """
 
-from typing import Protocol, Any, Optional, Callable, List, Dict, runtime_checkable
+from typing import Any, Callable, Dict, List, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -58,7 +58,9 @@ class TransportInterface(Protocol):
         """
         ...
 
-    def on_data(self, callback: Callable[[Any], Optional[Exception]]) -> Optional[Exception]:
+    def on_data(
+        self, callback: Callable[[Any], Optional[Exception]]
+    ) -> Optional[Exception]:
         """
         Register callback for incoming data.
 
@@ -104,7 +106,9 @@ class SessionManagerInterface(Protocol):
         """
         ...
 
-    def create_session(self, identity_key: str, auth_data: Optional[Any] = None) -> None:
+    def create_session(
+        self, identity_key: str, auth_data: Optional[Any] = None
+    ) -> None:
         """
         Create a new BSV session for the given identity key.
 
@@ -298,18 +302,15 @@ def validate_middleware_implementation(middleware: Any) -> bool:
 
 
 __all__ = [
-    # Protocol interfaces
-    "TransportInterface",
-    "SessionManagerInterface",
+    "AuthCallback",
+    "CertificateCallback",
     "MiddlewareInterface",
+    "PriceCalculationCallback",
     "RequestInterface",
     "ResponseInterface",
-    # Type aliases
-    "CertificateCallback",
-    "PriceCalculationCallback",
-    "AuthCallback",
-    # Validation functions
-    "validate_transport_implementation",
-    "validate_session_manager_implementation",
+    "SessionManagerInterface",
+    "TransportInterface",
     "validate_middleware_implementation",
+    "validate_session_manager_implementation",
+    "validate_transport_implementation",
 ]

@@ -19,37 +19,34 @@ __author__ = "BSV Middleware Team"
 __email__ = "team@bsv-middleware.com"
 
 # Core exports (framework-agnostic)
-from .types import (
-    WalletInterface,
-    AuthInfo,
-    PaymentInfo,
-    LogLevel,
-    BSVPayment,
-)
 from .exceptions import (
     BSVAuthException,
     BSVPaymentException,
     BSVServerMisconfiguredException,
 )
 from .interfaces import (
-    TransportInterface,
-    SessionManagerInterface,
     MiddlewareInterface,
+    SessionManagerInterface,
+    TransportInterface,
+)
+from .types import (
+    AuthInfo,
+    BSVPayment,
+    LogLevel,
+    PaymentInfo,
+    WalletInterface,
 )
 
 __all__ = [
-    # Core types
-    "WalletInterface",
     "AuthInfo",
-    "PaymentInfo",
-    "LogLevel",
-    "BSVPayment",
-    # Exceptions
     "BSVAuthException",
+    "BSVPayment",
     "BSVPaymentException",
     "BSVServerMisconfiguredException",
-    # Interfaces
-    "TransportInterface",
-    "SessionManagerInterface",
+    "LogLevel",
     "MiddlewareInterface",
+    "PaymentInfo",
+    "SessionManagerInterface",
+    "TransportInterface",
+    "WalletInterface",
 ]

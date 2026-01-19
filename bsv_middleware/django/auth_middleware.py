@@ -7,18 +7,20 @@ directly ported from Express createAuthMiddleware() function.
 
 import logging
 from typing import Optional
+
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
+from bsv_middleware.exceptions import BSVAuthException, BSVServerMisconfiguredException
+from bsv_middleware.py_sdk_bridge import create_py_sdk_bridge
 from bsv_middleware.types import (
     AuthMiddlewareOptions,
     LogLevel,
 )
-from bsv_middleware.exceptions import BSVAuthException, BSVServerMisconfiguredException
-from bsv_middleware.py_sdk_bridge import create_py_sdk_bridge
-from .transport import create_django_transport
+
 from .session_manager import create_django_session_manager
+from .transport import create_django_transport
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
         # Initialize components (equivalent to Express middleware setup)
         self._initialize_components()
 
-        logger.info(f"BSVAuthMiddleware initialized with wallet: {type(self.wallet).__name__}")
+        logger.info(
+            f"BSVAuthMiddleware initialized with wallet: {type(self.wallet).__name__}"
+        )
 
     def _load_configuration(self) -> None:
         """
@@ -82,7 +86,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
 
         except Exception as e:
             logger.error(f"Failed to load BSV middleware configuration: {e}")
-            raise BSVServerMisconfiguredException(f"Invalid BSV_MIDDLEWARE configuration: {str(e)}")
+            raise BSVServerMisconfiguredException(
+                f"Invalid BSV_MIDDLEWARE configuration: {e!s}"
+            )
 
     def _initialize_components(self) -> None:
         """
@@ -136,13 +142,17 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 logger.error(f"❌ py-sdk Peer integration failed: {e}")
                 # Record error details
                 self._log_integration_error(e)
-                raise BSVServerMisconfiguredException(f"py-sdk Peer integration failed: {str(e)}")
+                raise BSVServerMisconfiguredException(
+                    f"py-sdk Peer integration failed: {e!s}"
+                )
 
             logger.debug("BSV middleware components initialized successfully")
 
         except Exception as e:
             logger.error(f"Failed to initialize BSV middleware components: {e}")
-            raise BSVServerMisconfiguredException(f"Component initialization failed: {str(e)}")
+            raise BSVServerMisconfiguredException(
+                f"Component initialization failed: {e!s}"
+            )
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         """
@@ -159,7 +169,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 response = HttpResponse()
                 response.status_code = 204
                 # Add common CORS headers
-                response["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+                response["Access-Control-Allow-Methods"] = (
+                    "GET, POST, PUT, DELETE, OPTIONS"
+                )
                 # Explicitly list all BSV headers (auth + payment)
                 response["Access-Control-Allow-Headers"] = (
                     "Content-Type, Authorization, "
@@ -169,9 +181,6 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 )
                 response["Access-Control-Max-Age"] = "86400"  # 24 hours
                 return response
-
-            # Create session manager for this request
-            session_manager = self._get_session_manager(request)
 
             # Handle the request through transport (equivalent to Express transport.handleIncomingRequest)
             response = self.transport.handle_incoming_request(
@@ -215,7 +224,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 response = HttpResponse()
                 response.status_code = 204
                 # Add common CORS headers
-                response["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+                response["Access-Control-Allow-Methods"] = (
+                    "GET, POST, PUT, DELETE, OPTIONS"
+                )
                 # Explicitly list all BSV headers (auth + payment)
                 response["Access-Control-Allow-Headers"] = (
                     "Content-Type, Authorization, "
@@ -225,9 +236,6 @@ class BSVAuthMiddleware(MiddlewareMixin):
                 )
                 response["Access-Control-Max-Age"] = "86400"  # 24 hours
                 return response
-
-            # Create session manager for this request
-            session_manager = self._get_session_manager(request)
 
             # Handle authentication through transport
             response = self.transport.handle_incoming_request(
@@ -256,10 +264,14 @@ class BSVAuthMiddleware(MiddlewareMixin):
 
             traceback.print_exc()
             return self._build_error_response(
-                BSVServerMisconfiguredException(f"Authentication processing failed: {str(e)}")
+                BSVServerMisconfiguredException(
+                    f"Authentication processing failed: {e!s}"
+                )
             )
 
-    def process_response(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
+    def process_response(
+        self, request: HttpRequest, response: HttpResponse
+    ) -> HttpResponse:
         """
         Django middleware process_response hook.
 
@@ -272,7 +284,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
             # Debug logging - write to file for visibility
             has_auth = hasattr(request, "auth")
             identity_key = (
-                getattr(request.auth, "identity_key", "NO_AUTH") if has_auth else "NO_AUTH_ATTR"
+                getattr(request.auth, "identity_key", "NO_AUTH")
+                if has_auth
+                else "NO_AUTH_ATTR"
             )
             has_version = request.headers.get("x-bsv-auth-version")
 
@@ -329,7 +343,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
         import base64
         import os
 
-        logger.debug("[_add_auth_response_headers] START - adding auth headers to response")
+        logger.debug(
+            "[_add_auth_response_headers] START - adding auth headers to response"
+        )
 
         try:
             # Get request ID and nonces from incoming request
@@ -360,7 +376,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
             from bsv_middleware.wallet_adapter import create_wallet_adapter
 
             adapted_wallet = create_wallet_adapter(self.wallet)
-            identity_result = adapted_wallet.get_public_key({"identityKey": True}, "auth-response")
+            identity_result = adapted_wallet.get_public_key(
+                {"identityKey": True}, "auth-response"
+            )
             server_identity_key = (
                 identity_result.publicKey
                 if hasattr(identity_result, "publicKey")
@@ -372,11 +390,15 @@ class BSVAuthMiddleware(MiddlewareMixin):
             client_session_nonce = ""
             try:
                 if hasattr(self.transport, "peer") and self.transport.peer:
-                    session = self.transport.peer.session_manager.get_session(client_identity_key)
+                    session = self.transport.peer.session_manager.get_session(
+                        client_identity_key
+                    )
                     if session:
                         # peer_nonce is the client's session nonce
                         client_session_nonce = session.peer_nonce or ""
-                        logger.debug(f"Got client session nonce: {client_session_nonce[:20]}...")
+                        logger.debug(
+                            f"Got client session nonce: {client_session_nonce[:20]}..."
+                        )
             except Exception as e:
                 logger.warning(f"Failed to get client session nonce: {e}")
 
@@ -414,7 +436,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
             logger.debug(
                 f"[_add_auth_response_headers] response['x-bsv-auth-your-nonce'] = {response.get('x-bsv-auth-your-nonce', 'NOT SET')[:40] if response.get('x-bsv-auth-your-nonce') else 'NOT SET'}..."
             )
-            logger.debug("[_add_auth_response_headers] Headers set! Checking response object...")
+            logger.debug(
+                "[_add_auth_response_headers] Headers set! Checking response object..."
+            )
             logger.debug(
                 f"[_add_auth_response_headers] response['x-bsv-auth-version'] = {response.get('x-bsv-auth-version')}"
             )
@@ -432,7 +456,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
             logger.error(f"[_add_auth_response_headers] EXCEPTION: {e}")
             import traceback
 
-            logger.error(f"[_add_auth_response_headers] Traceback:\n{traceback.format_exc()}")
+            logger.error(
+                f"[_add_auth_response_headers] Traceback:\n{traceback.format_exc()}"
+            )
             traceback.print_exc()
             # Return response without auth headers on error
             return response
@@ -459,7 +485,9 @@ class BSVAuthMiddleware(MiddlewareMixin):
         included_headers = []
         for key, value in response.items():
             key_lower = key.lower()
-            if key_lower.startswith("x-bsv-") and not key_lower.startswith("x-bsv-auth"):
+            if key_lower.startswith("x-bsv-") and not key_lower.startswith(
+                "x-bsv-auth"
+            ):
                 included_headers.append((key_lower, value))
 
         self._write_varint(buf, len(included_headers))
@@ -502,7 +530,12 @@ class BSVAuthMiddleware(MiddlewareMixin):
         buf.extend(b)
 
     def _sign_response(
-        self, wallet, payload: bytes, client_nonce: str, server_nonce: str, client_identity_key: str
+        self,
+        wallet,
+        payload: bytes,
+        client_nonce: str,
+        server_nonce: str,
+        client_identity_key: str,
     ) -> str:
         """Sign the response payload."""
         try:
@@ -627,7 +660,10 @@ def create_auth_middleware(options: AuthMiddlewareOptions) -> BSVAuthMiddleware:
 
 # Helper function for certificate handling (equivalent to Express onCertificatesReceived)
 def default_certificates_received_handler(
-    sender_public_key: str, certificates: list, request: HttpRequest, response: HttpResponse
+    sender_public_key: str,
+    certificates: list,
+    request: HttpRequest,
+    response: HttpResponse,
 ) -> None:
     """
     Default certificate received handler.

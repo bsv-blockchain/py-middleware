@@ -10,9 +10,8 @@ import logging
 from typing import Optional, Dict, Any, Callable
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
-from bsv_middleware.types import LogLevel, BSVPayment, PaymentInfo
-from bsv_middleware.exceptions import BSVAuthException, BSVServerMisconfiguredException
-from bsv_middleware.py_sdk_bridge import PySdkBridge
+from bsv_middleware.types import LogLevel, PaymentInfo
+from bsv_middleware.exceptions import BSVServerMisconfiguredException
 
 logger = logging.getLogger(__name__)
 

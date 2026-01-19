@@ -6,7 +6,8 @@ integrating with Django's session framework.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from django.contrib.sessions.backends.base import SessionBase
 
 from bsv_middleware.types import PubKeyHex
@@ -96,7 +97,9 @@ class DjangoSessionManager:
             logger.error(f"Failed to get session for {identity_key}: {e}")
             return None
 
-    def update_session(self, identity_key: PubKeyHex, auth_data: Dict[str, Any]) -> None:
+    def update_session(
+        self, identity_key: PubKeyHex, auth_data: Dict[str, Any]
+    ) -> None:
         """
         Update the BSV session data for the given identity key.
 
@@ -117,7 +120,9 @@ class DjangoSessionManager:
 
                 logger.debug(f"Updated BSV session for {identity_key}")
             else:
-                logger.warning(f"Attempted to update non-existent session for {identity_key}")
+                logger.warning(
+                    f"Attempted to update non-existent session for {identity_key}"
+                )
 
         except Exception as e:
             logger.error(f"Failed to update session for {identity_key}: {e}")

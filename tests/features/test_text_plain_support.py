@@ -5,15 +5,16 @@ Test text/plain content type support for BSV middleware
 Tests Express compatibility for text/plain processing
 """
 
-import pytest
-from django.test import TestCase, Client
-from django.http import HttpRequest
 from unittest.mock import patch
 
+import pytest
+from django.http import HttpRequest
+from django.test import Client, TestCase
+
 from examples.django_example.adapter.utils import (
-    is_text_plain_request,
-    get_text_content,
     get_content_by_type,
+    get_text_content,
+    is_text_plain_request,
 )
 
 
@@ -60,7 +61,9 @@ Line 3 with unicode: café"""
                 request.META["CONTENT_TYPE"] = content_type
 
                 result = is_text_plain_request(request)
-                self.assertEqual(result, expected, f"Failed for content-type: {content_type}")
+                self.assertEqual(
+                    result, expected, f"Failed for content-type: {content_type}"
+                )
 
     def test_get_text_content_utf8(self):
         """Test UTF-8 text content extraction"""
@@ -148,7 +151,9 @@ Line 3 with unicode: café"""
         # Verify different processing for each type
         self.assertEqual(text_result["content_type"], "text/plain")
         self.assertEqual(json_result["content_type"], "application/json")
-        self.assertEqual(form_result["content_type"], "application/x-www-form-urlencoded")
+        self.assertEqual(
+            form_result["content_type"], "application/x-www-form-urlencoded"
+        )
 
         # Text should be string, JSON should be dict, form should be dict
         self.assertIsInstance(text_result["data"], str)
@@ -183,7 +188,7 @@ Line 3 with unicode: café"""
         """Test that appropriate logging occurs"""
         request = self._create_text_request(self.test_text_utf8)
 
-        result = get_text_content(request)
+        get_text_content(request)
 
         # Verify debug log was called
         mock_logger.debug.assert_called()

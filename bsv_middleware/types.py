@@ -5,8 +5,9 @@ Pythonic implementation with Express middleware compatibility.
 """
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, Callable, Protocol, List, Union
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Protocol, Union
+
 from django.http import HttpRequest, HttpResponse
 
 
@@ -127,7 +128,9 @@ class SessionManagerInterface(Protocol):
 
 
 # Type aliases for callbacks
-CertificatesReceivedCallback = Callable[[str, List[Any], HttpRequest, HttpResponse], None]
+CertificatesReceivedCallback = Callable[
+    [str, List[Any], HttpRequest, HttpResponse], None
+]
 
 CalculateRequestPriceCallback = Callable[[HttpRequest], Union[int, float]]
 

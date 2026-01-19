@@ -5,9 +5,9 @@ Tests Express middleware compatibility and BSV protocol compliance
 
 import json
 import os
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # Django setup
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_example_test_settings")
@@ -16,18 +16,18 @@ import django
 
 django.setup()
 
-from django.test import RequestFactory, Client
+from django.test import Client, RequestFactory
 
 # Import all views for testing
 from examples.django_example.myapp.views import (
-    home,
-    health,
-    public_endpoint,
-    protected_endpoint,
-    premium_endpoint,
     auth_test,
     decorator_auth_example,
     decorator_payment_example,
+    health,
+    home,
+    premium_endpoint,
+    protected_endpoint,
+    public_endpoint,
 )
 
 
@@ -52,7 +52,9 @@ class BSVHeaders:
 
     auth_version: str = "1.0"
     auth_message_type: str = "initial"
-    identity_key: str = "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"
+    identity_key: str = (
+        "033f5aed5f6cfbafaf94570c8cde0c0a6e2b5fb0e07ca40ce1d6f6bdfde1e5b9b8"
+    )
     nonce: str = "test_nonce_12345"
     payment: Optional[str] = None
 
@@ -83,7 +85,11 @@ class ComprehensiveAPITester:
     def create_payment_header(self, satoshis: int, tx_id: str = "test_tx_123") -> str:
         """Create payment header"""
         return json.dumps(
-            {"derivationPrefix": "test_prefix", "satoshis": satoshis, "transaction": tx_id}
+            {
+                "derivationPrefix": "test_prefix",
+                "satoshis": satoshis,
+                "transaction": tx_id,
+            }
         )
 
     def execute_test_case(self, test_case: APITestCase) -> Dict[str, Any]:
@@ -96,13 +102,15 @@ class ComprehensiveAPITester:
                 request = self.factory.get(test_case.endpoint)
             elif test_case.method == "POST":
                 request = self.factory.post(
-                    test_case.endpoint, data=test_case.data or {}, content_type="application/json"
+                    test_case.endpoint,
+                    data=test_case.data or {},
+                    content_type="application/json",
                 )
 
             # Add headers
             if test_case.headers:
                 for key, value in test_case.headers.items():
-                    request.META[f'HTTP_{key.upper().replace("-", "_")}'] = value
+                    request.META[f"HTTP_{key.upper().replace('-', '_')}"] = value
 
             # Execute view function
             view_map = {
@@ -139,7 +147,9 @@ class ComprehensiveAPITester:
             # Check required fields
             if test_case.expected_fields:
                 missing_fields = [
-                    field for field in test_case.expected_fields if field not in response_data
+                    field
+                    for field in test_case.expected_fields
+                    if field not in response_data
                 ]
                 result["missing_fields"] = missing_fields
                 if missing_fields:
@@ -158,7 +168,7 @@ class ComprehensiveAPITester:
             return result
 
         except Exception as e:
-            print(f"   ❌ ERROR: {str(e)}")
+            print(f"   ❌ ERROR: {e!s}")
             error_result = {
                 "test_name": test_case.name,
                 "endpoint": test_case.endpoint,
@@ -181,7 +191,12 @@ class EndpointCoverageTester(ComprehensiveAPITester):
             APITestCase(
                 name="Home endpoint - free access",
                 endpoint="/",
-                expected_fields=["message", "endpoints", "identity_key", "authenticated"],
+                expected_fields=[
+                    "message",
+                    "endpoints",
+                    "identity_key",
+                    "authenticated",
+                ],
             ),
             APITestCase(
                 name="Health endpoint - free access",
@@ -273,7 +288,9 @@ class EndpointCoverageTester(ComprehensiveAPITester):
         }
 
         print("\n" + "=" * 50)
-        print(f"📊 Test Summary: {passed_tests}/{total_tests} tests passed ({pass_rate:.1f}%)")
+        print(
+            f"📊 Test Summary: {passed_tests}/{total_tests} tests passed ({pass_rate:.1f}%)"
+        )
 
         if self.failed_tests:
             print(f"\n❌ Failed Tests ({len(self.failed_tests)}):")
@@ -324,7 +341,9 @@ LOGGING = {
 }
 """
 
-    settings_file = os.path.join(os.path.dirname(__file__), "django_example_test_settings.py")
+    settings_file = os.path.join(
+        os.path.dirname(__file__), "django_example_test_settings.py"
+    )
     with open(settings_file, "w") as f:
         f.write(settings_content)
 
@@ -343,4 +362,6 @@ if __name__ == "__main__":
         if result["success"]:
             print(f"   ✅ {result['test_name']}")
         else:
-            print(f"   ❌ {result['test_name']}: {result.get('error', 'Status mismatch')}")
+            print(
+                f"   ❌ {result['test_name']}: {result.get('error', 'Status mismatch')}"
+            )

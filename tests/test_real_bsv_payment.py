@@ -7,10 +7,10 @@ Express middleware payment implementation reference:
 - payment-express-middleware/src/index.ts
 """
 
+import base64
+import json
 import os
 import sys
-import json
-import base64
 from pathlib import Path
 
 # Setup
@@ -31,8 +31,8 @@ from bsv_middleware.py_sdk_bridge import create_nonce, verify_nonce
 
 # py-sdk imports
 try:
-    from bsv.transaction import Transaction
     from bsv.keys import PrivateKey
+    from bsv.transaction import Transaction
 
     py_sdk_available = True
 except ImportError as e:
@@ -57,7 +57,9 @@ class RealBSVPaymentTester:
 
         # Test private key (for creating real transactions)
         if py_sdk_available:
-            self.private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
+            self.private_key = PrivateKey(
+                "L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9"
+            )
             self.public_key = self.private_key.public_key()
             self.identity_key = self.public_key.hex()
 
@@ -108,8 +110,12 @@ class RealBSVPaymentTester:
                 if outputs:
                     output = outputs[0]
                     remittance = output.get("paymentRemittance", {})
-                    print(f"   derivationPrefix: {remittance.get('derivationPrefix', '')[:20]}...")
-                    print(f"   derivationSuffix: {remittance.get('derivationSuffix', '')[:20]}...")
+                    print(
+                        f"   derivationPrefix: {remittance.get('derivationPrefix', '')[:20]}..."
+                    )
+                    print(
+                        f"   derivationSuffix: {remittance.get('derivationSuffix', '')[:20]}..."
+                    )
                     print(f"   protocol: {output.get('protocol')}")
 
                 # Mock: Always accept payment
@@ -193,11 +199,15 @@ class RealBSVPaymentTester:
             payment_data = {
                 "derivationPrefix": "test_prefix_12345",
                 "derivationSuffix": "test_suffix_67890",
-                "transaction": base64.b64encode(b"mock_transaction_data").decode("utf-8"),
+                "transaction": base64.b64encode(b"mock_transaction_data").decode(
+                    "utf-8"
+                ),
             }
 
             # Create request with payment header
-            request = self.factory.post("/api/paid-endpoint", content_type="application/json")
+            request = self.factory.post(
+                "/api/paid-endpoint", content_type="application/json"
+            )
 
             # Set payment header (Express: req.headers['x-bsv-payment'])
             payment_header = json.dumps(payment_data)
@@ -214,7 +224,9 @@ class RealBSVPaymentTester:
             print("✅ Payment header parsed successfully")
 
             # Verify nonce (Express: lines 79-90)
-            is_valid_nonce = verify_nonce(parsed_payment["derivationPrefix"], self.mock_wallet)
+            is_valid_nonce = verify_nonce(
+                parsed_payment["derivationPrefix"], self.mock_wallet
+            )
 
             if is_valid_nonce:
                 print("✅ Nonce verification passed")
@@ -245,7 +257,9 @@ class RealBSVPaymentTester:
             payment_data = {
                 "derivationPrefix": "test_prefix_12345",
                 "derivationSuffix": "test_suffix_67890",
-                "transaction": base64.b64encode(b"mock_beef_transaction").decode("utf-8"),
+                "transaction": base64.b64encode(b"mock_beef_transaction").decode(
+                    "utf-8"
+                ),
             }
 
             # Mock authenticated identity
@@ -260,7 +274,9 @@ class RealBSVPaymentTester:
 
             # Prepare internalize action args (Express: lines 100-112)
             action_args = {
-                "tx": base64.b64decode(payment_data["transaction"]),  # Convert base64 to bytes
+                "tx": base64.b64decode(
+                    payment_data["transaction"]
+                ),  # Convert base64 to bytes
                 "outputs": [
                     {
                         "paymentRemittance": {
@@ -323,7 +339,6 @@ class RealBSVPaymentTester:
 
         try:
             # Mock request with price = 0
-            request = self.factory.get("/api/free-endpoint")
             request_price = 0
 
             print(f"📝 Request price: {request_price} satoshis")
@@ -380,7 +395,6 @@ class RealBSVPaymentTester:
 
             # Step 4: Check for payment header (Express: lines 59-74)
             print("\n📋 Step 4: Check for payment header")
-            has_payment_header = True  # Simulate payment provided
             print("✅ Payment header present")
 
             # Step 5: Verify and internalize payment (Express: lines 76-132)

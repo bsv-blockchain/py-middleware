@@ -11,13 +11,13 @@ Based on Go tests from go-bsv-middleware/pkg/middleware/auth_middleware_test.go
 """
 
 import pytest
-from django.test import Client, RequestFactory
-from django.conf import settings
-from django.http import JsonResponse
+from bsv.keys import PrivateKey
 
 # py-sdk imports
 from bsv.wallet import ProtoWallet
-from bsv.keys import PrivateKey
+from django.conf import settings
+from django.http import JsonResponse
+from django.test import Client, RequestFactory
 
 # Middleware imports
 from examples.django_example.adapter.auth_middleware import BSVAuthMiddleware
@@ -46,7 +46,10 @@ class MockWalletForClient:
         identity_key = args.get("identityKey", False)
         if identity_key:
             return {"publicKey": self._public_key.serialize().hex()}
-        return {"publicKey": self._public_key.serialize().hex(), "derivationPrefix": None}
+        return {
+            "publicKey": self._public_key.serialize().hex(),
+            "derivationPrefix": None,
+        }
 
     def create_signature(self, args=None, originator=None):
         """Create signature - BSV SDK compatible"""
@@ -141,7 +144,11 @@ class MockWalletForClient:
 
     def create_action(self, args=None, originator=None):
         """Create action"""
-        return {"tx": [1, 0, 0, 0, 1, 0xAB, 0xCD, 0xEF], "txid": "mock_tx_id", "noSendChange": []}
+        return {
+            "tx": [1, 0, 0, 0, 1, 0xAB, 0xCD, 0xEF],
+            "txid": "mock_tx_id",
+            "noSendChange": [],
+        }
 
     def internalize_action(self, args=None, originator=None):
         """Internalize action"""
@@ -211,7 +218,9 @@ class TestMissingHighPriority:
         # Create mock wallet
         self.private_key = PrivateKey()
         self.wallet = ProtoWallet(
-            private_key=self.private_key, permission_callback=lambda action: True, load_env=False
+            private_key=self.private_key,
+            permission_callback=lambda action: True,
+            load_env=False,
         )
 
         # Django test client
@@ -297,7 +306,9 @@ class TestMissingHighPriority:
         """
 
         def dummy_view(request):
-            return JsonResponse({"method": request.method, "query": request.GET.urlencode()})
+            return JsonResponse(
+                {"method": request.method, "query": request.GET.urlencode()}
+            )
 
         middleware = BSVAuthMiddleware(dummy_view)
 
@@ -325,7 +336,11 @@ class TestMissingHighPriority:
 
         def dummy_view(request):
             return JsonResponse(
-                {"method": request.method, "path": request.path, "query": request.GET.urlencode()}
+                {
+                    "method": request.method,
+                    "path": request.path,
+                    "query": request.GET.urlencode(),
+                }
             )
 
         middleware = BSVAuthMiddleware(dummy_view)
@@ -498,7 +513,9 @@ class TestMissingHighPriority:
         identity_key_1 = wallet1.get_public_key(args={"identityKey": True})["publicKey"]
         identity_key_2 = wallet2.get_public_key(args={"identityKey": True})["publicKey"]
 
-        assert identity_key_1 == identity_key_2, "Same user should have same identity key"
+        assert identity_key_1 == identity_key_2, (
+            "Same user should have same identity key"
+        )
 
         print(f"Client 1 identity: {identity_key_1[:20]}...")
         print(f"Client 2 identity: {identity_key_2[:20]}...")
@@ -525,9 +542,9 @@ class TestMissingHighPriority:
         identity_key_1 = wallet1.get_public_key(args={"identityKey": True})["publicKey"]
         identity_key_2 = wallet2.get_public_key(args={"identityKey": True})["publicKey"]
 
-        assert (
-            identity_key_1 != identity_key_2
-        ), "Different users should have different identity keys"
+        assert identity_key_1 != identity_key_2, (
+            "Different users should have different identity keys"
+        )
 
         print(f"User 1 identity: {identity_key_1[:20]}...")
         print(f"User 2 identity: {identity_key_2[:20]}...")
@@ -576,7 +593,9 @@ class TestMissingHighPriority:
             if response.status_code == 401:
                 print("Correctly rejected unauthenticated request")
             else:
-                print("Middleware allows unauthenticated requests (may be configured differently)")
+                print(
+                    "Middleware allows unauthenticated requests (may be configured differently)"
+                )
 
         except Exception as e:
             print(f"Unauthenticated request test: {e}")
@@ -593,7 +612,10 @@ class TestMissingHighPriority:
 
         def dummy_view(request):
             return JsonResponse(
-                {"authenticated": hasattr(request, "bsv_auth"), "message": "Request processed"}
+                {
+                    "authenticated": hasattr(request, "bsv_auth"),
+                    "message": "Request processed",
+                }
             )
 
         # Configure middleware to allow unauthenticated requests

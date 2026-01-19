@@ -5,10 +5,8 @@ This example demonstrates how to configure BSV authentication and payment
 middleware in a Django application.
 """
 
-import os
 import sys
 from pathlib import Path
-from typing import Dict, Any
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,9 +51,9 @@ for path in possible_middleware_paths:
 
 # Warn if local dependencies not found (will fall back to installed packages)
 if not found_sdk:
-    print(f"[SETTINGS] WARNING: Local py-sdk not found, will use installed package")
+    print("[SETTINGS] WARNING: Local py-sdk not found, will use installed package")
 if not found_middleware:
-    print(f"[SETTINGS] WARNING: Local py-middleware not found, will use installed package")
+    print("[SETTINGS] WARNING: Local py-middleware not found, will use installed package")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-example-key-do-not-use-in-production'
@@ -195,7 +193,7 @@ try:
     bsv_wallet = create_wallet_adapter(proto_wallet)
     
     print(f"[OK] Created ProtoWallet with public key: {proto_wallet.public_key.hex()}")
-    print(f"[OK] Wallet adapter created successfully")
+    print("[OK] Wallet adapter created successfully")
     
 except Exception as e:
     print(f"[ERROR] Failed to create ProtoWallet: {e}")
@@ -220,7 +218,7 @@ except Exception as e:
             }
     
     bsv_wallet = MockWallet()
-    print(f"[WARN] Using fallback mock wallet - authentication will NOT work properly!")
+    print("[WARN] Using fallback mock wallet - authentication will NOT work properly!")
 
 # Certificate received callback
 def handle_certificates_received(sender_public_key, certificates, request, response):

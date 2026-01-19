@@ -3,18 +3,20 @@ Basic tests for BSV middleware functionality.
 """
 
 import pytest
-from django.test import TestCase, RequestFactory
 from django.http import JsonResponse
+from django.test import RequestFactory, TestCase
 
-from bsv_middleware.types import AuthInfo, PaymentInfo, LogLevel
+from bsv_middleware.py_sdk_bridge import PySdkBridge
+from bsv_middleware.types import AuthInfo, LogLevel, PaymentInfo
 from examples.django_example.adapter import BSVAuthMiddleware
-from examples.django_example.adapter.payment_middleware_complete import BSVPaymentMiddleware
+from examples.django_example.adapter.payment_middleware_complete import (
+    BSVPaymentMiddleware,
+)
 from examples.django_example.adapter.utils import (
     extract_bsv_headers,
     get_identity_key,
     is_authenticated_request,
 )
-from bsv_middleware.py_sdk_bridge import PySdkBridge
 from tests.settings import MockTestWallet
 
 
@@ -168,6 +170,7 @@ class TestBSVMiddlewarePytest:
 
     def test_middleware_basic_functionality(self):
         """Test basic middleware functionality with pytest."""
+
         # Create dummy get_response function
         def dummy_get_response(req):
             from django.http import JsonResponse
@@ -201,9 +204,12 @@ class TestBSVMiddlewarePytest:
         # Test wallet operations
         pub_key = wallet.get_public_key()
         # MockTestWallet returns a valid 33-byte compressed public key (66 hex chars)
-        assert pub_key == "02e46dcd7991e5a4bd642739249b0158312e1aee56a60fd1bf622172ffe65bd789"
+        assert (
+            pub_key
+            == "02e46dcd7991e5a4bd642739249b0158312e1aee56a60fd1bf622172ffe65bd789"
+        )
         assert len(pub_key) == 66  # 33 bytes * 2 (hex)
-        assert pub_key.startswith("02") or pub_key.startswith("03")  # Compressed key prefix
+        assert pub_key.startswith(("02", "03"))  # Compressed key prefix
 
         signature = wallet.sign_message(b"test message")
         assert signature == b"test_signature"

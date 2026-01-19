@@ -3,9 +3,9 @@ Comprehensive Test Runner for BSV Middleware Django Example
 Runs all tests and generates detailed reports
 """
 
+import json
 import os
 import sys
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -27,12 +27,12 @@ from django.test import RequestFactory
 # Import views
 try:
     from myapp.views import (
-        home,
-        health,
-        public_endpoint,
-        protected_endpoint,
-        premium_endpoint,
         auth_test,
+        health,
+        home,
+        premium_endpoint,
+        protected_endpoint,
+        public_endpoint,
     )
 
     print("✅ Successfully imported Django views")
@@ -49,7 +49,12 @@ class SimpleAPITester:
         self.test_results = []
 
     def test_endpoint(
-        self, endpoint_name: str, view_func, path: str, method: str = "GET", headers: dict = None
+        self,
+        endpoint_name: str,
+        view_func,
+        path: str,
+        method: str = "GET",
+        headers: dict = None,
     ):
         """Test a single endpoint"""
         print(f"\n🧪 Testing {endpoint_name}")
@@ -64,7 +69,7 @@ class SimpleAPITester:
             # Add headers
             if headers:
                 for key, value in headers.items():
-                    request.META[f'HTTP_{key.upper().replace("-", "_")}'] = value
+                    request.META[f"HTTP_{key.upper().replace('-', '_')}"] = value
 
             # Execute view
             response = view_func(request)
@@ -92,7 +97,7 @@ class SimpleAPITester:
             return result
 
         except Exception as e:
-            print(f"   ❌ Error: {str(e)}")
+            print(f"   ❌ Error: {e!s}")
             error_result = {
                 "endpoint": endpoint_name,
                 "path": path,
@@ -144,7 +149,11 @@ class SimpleAPITester:
         # Test with payment header
         payment_headers = bsv_headers.copy()
         payment_headers["x-bsv-payment"] = json.dumps(
-            {"derivationPrefix": "test_prefix", "satoshis": 1000, "transaction": "test_tx_123"}
+            {
+                "derivationPrefix": "test_prefix",
+                "satoshis": 1000,
+                "transaction": "test_tx_123",
+            }
         )
 
         self.test_endpoint(
@@ -158,10 +167,10 @@ class SimpleAPITester:
 
         try:
             from .django_example.adapter.utils import (
+                create_bsv_response,
+                format_satoshis,
                 get_identity_key,
                 is_authenticated_request,
-                format_satoshis,
-                create_bsv_response,
             )
 
             # Test format_satoshis
@@ -188,13 +197,15 @@ class SimpleAPITester:
             return True
 
         except Exception as e:
-            print(f"   ❌ Utils test error: {str(e)}")
+            print(f"   ❌ Utils test error: {e!s}")
             return False
 
     def generate_report(self):
         """Generate comprehensive test report"""
         total_tests = len(self.test_results)
-        successful_tests = sum(1 for result in self.test_results if result.get("success", False))
+        successful_tests = sum(
+            1 for result in self.test_results if result.get("success", False)
+        )
         failed_tests = total_tests - successful_tests
 
         report = {
@@ -203,7 +214,9 @@ class SimpleAPITester:
                 "successful_tests": successful_tests,
                 "failed_tests": failed_tests,
                 "success_rate": (
-                    round((successful_tests / total_tests) * 100, 2) if total_tests > 0 else 0
+                    round((successful_tests / total_tests) * 100, 2)
+                    if total_tests > 0
+                    else 0
                 ),
             },
             "test_results": self.test_results,
@@ -222,7 +235,9 @@ class SimpleAPITester:
             print("\n❌ Failed Tests:")
             for result in self.test_results:
                 if not result.get("success", False):
-                    print(f"   - {result['endpoint']}: {result.get('error', 'Unknown error')}")
+                    print(
+                        f"   - {result['endpoint']}: {result.get('error', 'Unknown error')}"
+                    )
         else:
             print("\n🎉 All tests passed!")
 
@@ -262,7 +277,7 @@ def main():
             sys.exit(1)
 
     except Exception as e:
-        print(f"\n💥 Test runner failed: {str(e)}")
+        print(f"\n💥 Test runner failed: {e!s}")
         import traceback
 
         traceback.print_exc()

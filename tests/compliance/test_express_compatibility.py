@@ -3,9 +3,9 @@ Express Middleware Compatibility Test
 Direct comparison with Express middleware behavior
 """
 
+import json
 import os
 import sys
-import json
 from pathlib import Path
 
 # Setup
@@ -36,7 +36,7 @@ class ExpressCompatibilityTester:
         print("🔄 Testing Express API Compatibility")
         print("-" * 40)
 
-        from myapp.views import home, health, auth_test
+        from myapp.views import auth_test, health, home
 
         # Test cases based on Express middleware behavior
         express_compatibility_tests = [
@@ -44,7 +44,12 @@ class ExpressCompatibilityTester:
                 "name": "Home endpoint response structure",
                 "view": home,
                 "path": "/",
-                "expected_fields": ["message", "endpoints", "identity_key", "authenticated"],
+                "expected_fields": [
+                    "message",
+                    "endpoints",
+                    "identity_key",
+                    "authenticated",
+                ],
                 "express_format": {
                     "message": "string",
                     "endpoints": "object",
@@ -98,7 +103,9 @@ class ExpressCompatibilityTester:
 
                 # Check field presence
                 missing_fields = [
-                    field for field in test["expected_fields"] if field not in response_data
+                    field
+                    for field in test["expected_fields"]
+                    if field not in response_data
                 ]
 
                 # Check data types match Express format
@@ -114,9 +121,13 @@ class ExpressCompatibilityTester:
                         elif expected_type == "object":
                             matches = isinstance(actual_value, dict)
                         elif expected_type == "object|null":
-                            matches = isinstance(actual_value, dict) or actual_value is None
+                            matches = (
+                                isinstance(actual_value, dict) or actual_value is None
+                            )
                         elif expected_type == "string|null":
-                            matches = isinstance(actual_value, str) or actual_value is None
+                            matches = (
+                                isinstance(actual_value, str) or actual_value is None
+                            )
                         elif expected_type == "healthy":
                             matches = actual_value == "healthy"
                         else:
@@ -137,7 +148,7 @@ class ExpressCompatibilityTester:
                             print(f"         Type mismatch: {field}")
 
             except Exception as e:
-                print(f"      ❌ Error: {str(e)}")
+                print(f"      ❌ Error: {e!s}")
 
         return True
 
@@ -170,7 +181,7 @@ class ExpressCompatibilityTester:
 
         # Add headers
         for key, value in express_bsv_headers.items():
-            request.META[f'HTTP_{key.upper().replace("-", "_")}'] = value
+            request.META[f"HTTP_{key.upper().replace('-', '_')}"] = value
 
         try:
             response = auth_test(request)
@@ -183,7 +194,9 @@ class ExpressCompatibilityTester:
             expected_headers = len(express_bsv_headers)
 
             if detected_headers == expected_headers:
-                print(f"      ✅ All {detected_headers} headers detected (Express compatible)")
+                print(
+                    f"      ✅ All {detected_headers} headers detected (Express compatible)"
+                )
                 self.compatibility_score += 1
             else:
                 print(f"      ⚠️ {detected_headers}/{expected_headers} headers detected")
@@ -197,7 +210,7 @@ class ExpressCompatibilityTester:
                     print(f"         ❌ {header_key} not found")
 
         except Exception as e:
-            print(f"      ❌ Error: {str(e)}")
+            print(f"      ❌ Error: {e!s}")
 
         return True
 
@@ -206,7 +219,7 @@ class ExpressCompatibilityTester:
         print("\n⚠️ Testing Error Response Compatibility")
         print("-" * 42)
 
-        from myapp.views import protected_endpoint, premium_endpoint
+        from myapp.views import premium_endpoint, protected_endpoint
 
         # Express-style error response tests
         error_tests = [
@@ -249,7 +262,7 @@ class ExpressCompatibilityTester:
 
                 # Check Express error format
                 format_match = all(
-                    field in response_data for field in test["express_error_format"].keys()
+                    field in response_data for field in test["express_error_format"]
                 )
 
                 # Check error message contains required info
@@ -257,7 +270,8 @@ class ExpressCompatibilityTester:
                 message_text = response_data.get("message", "")
 
                 has_error_info = (
-                    "required" in error_msg.lower() or "required" in message_text.lower()
+                    "required" in error_msg.lower()
+                    or "required" in message_text.lower()
                 )
 
                 if status_match and format_match and has_error_info:
@@ -272,7 +286,7 @@ class ExpressCompatibilityTester:
                     print(f"         Message: {'✅' if has_error_info else '❌'}")
 
             except Exception as e:
-                print(f"      ❌ Error: {str(e)}")
+                print(f"      ❌ Error: {e!s}")
 
         return True
 
@@ -282,8 +296,8 @@ class ExpressCompatibilityTester:
         print("-" * 45)
 
         from .django_example.adapter.utils import (
-            format_satoshis,
             create_bsv_response,
+            format_satoshis,
         )
 
         print("   📦 Testing Express-compatible utility functions")
@@ -295,7 +309,9 @@ class ExpressCompatibilityTester:
             satoshi_formats = [format_satoshis(amount) for amount in test_amounts]
 
             # Express format: "X satoshi(s)"
-            express_compatible = all("satoshi" in fmt.lower() for fmt in satoshi_formats)
+            express_compatible = all(
+                "satoshi" in fmt.lower() for fmt in satoshi_formats
+            )
 
             if express_compatible:
                 print("      ✅ Satoshi formatting Express compatible")
@@ -327,7 +343,7 @@ class ExpressCompatibilityTester:
                 print("      ⚠️ Partial utility compatibility")
 
         except Exception as e:
-            print(f"      ❌ Error: {str(e)}")
+            print(f"      ❌ Error: {e!s}")
 
         return True
 
@@ -344,7 +360,9 @@ class ExpressCompatibilityTester:
 
         # Calculate final compatibility score
         compatibility_percentage = (
-            (self.compatibility_score / self.total_tests) * 100 if self.total_tests > 0 else 0
+            (self.compatibility_score / self.total_tests) * 100
+            if self.total_tests > 0
+            else 0
         )
 
         print("\n" + "=" * 60)

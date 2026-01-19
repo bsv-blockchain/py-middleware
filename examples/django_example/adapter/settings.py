@@ -5,7 +5,7 @@ This module provides Django settings integration and configuration helpers
 for BSV authentication and payment middleware.
 """
 
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
 

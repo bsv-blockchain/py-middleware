@@ -4,11 +4,12 @@ Real BSV Authentication Testing
 Tests authentication features using actual BSV data
 """
 
+import json
 import os
 import sys
-import json
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Setup
 current_dir = Path(__file__).resolve().parent
@@ -26,10 +27,10 @@ from django.test import RequestFactory
 
 # py-sdk imports for real BSV operations
 try:
-    from bsv.keys import PrivateKey, PublicKey, verify_signed_text
-    from bsv.signed_message import SignedMessage
     from bsv.auth.auth_message import AuthMessage
     from bsv.auth.verifiable_certificate import VerifiableCertificate
+    from bsv.keys import PrivateKey, PublicKey, verify_signed_text
+    from bsv.signed_message import SignedMessage
 
     py_sdk_available = True
 except ImportError as e:
@@ -45,7 +46,9 @@ class RealBSVAuthTester:
 
         if py_sdk_available:
             # Create real BSV private key for testing
-            self.private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
+            self.private_key = PrivateKey(
+                "L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9"
+            )
             self.public_key = self.private_key.public_key()
             self.identity_key = self.public_key.hex()
 
@@ -155,7 +158,7 @@ class RealBSVAuthTester:
 
             # Set headers
             for key, value in bsv_headers.items():
-                request.META[f'HTTP_{key.upper().replace("-", "_")}'] = value
+                request.META[f"HTTP_{key.upper().replace('-', '_')}"] = value
 
             # Set body
             request._body = json.dumps(auth_message).encode("utf-8")
@@ -181,7 +184,10 @@ class RealBSVAuthTester:
         """Middleware integration test"""
         try:
             # BSV Middleware component test
-            from .django_example.adapter.utils import get_identity_key, debug_request_info
+            from .django_example.adapter.utils import (
+                debug_request_info,
+                get_identity_key,
+            )
 
             # Debug request information
             debug_info = debug_request_info(request)
@@ -225,15 +231,21 @@ class RealBSVAuthTester:
 
             verification_result = SignedMessage.verify(message_bytes, signature_bytes)
 
-            print(f"🔍 Verification Result: {'✅ VALID' if verification_result else '❌ INVALID'}")
+            print(
+                f"🔍 Verification Result: {'✅ VALID' if verification_result else '❌ INVALID'}"
+            )
 
             # Try text signature verification as well
             try:
                 address, text_signature = self.private_key.sign_text(test_message)
-                text_verification = verify_signed_text(test_message, address, text_signature)
+                text_verification = verify_signed_text(
+                    test_message, address, text_signature
+                )
 
                 print(f"📝 Text Signature: {text_signature}")
-                print(f"🔍 Text Verification: {'✅ VALID' if text_verification else '❌ INVALID'}")
+                print(
+                    f"🔍 Text Verification: {'✅ VALID' if text_verification else '❌ INVALID'}"
+                )
 
             except Exception as text_error:
                 print(f"⚠️ Text signature test error: {text_error}")

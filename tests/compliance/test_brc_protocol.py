@@ -3,9 +3,9 @@ BRC-103/104 Protocol Compliance Tests
 Tests BSV protocol specification compliance
 """
 
+import json
 import os
 import sys
-import json
 from pathlib import Path
 
 # Setup
@@ -44,7 +44,12 @@ class BRCProtocolTester:
         ]
 
         # Valid BRC-103 message types
-        valid_message_types = ["initial", "certificate_request", "certificate_response", "general"]
+        valid_message_types = [
+            "initial",
+            "certificate_request",
+            "certificate_response",
+            "general",
+        ]
 
         # Test header presence and format
         for header in required_headers:
@@ -52,12 +57,12 @@ class BRCProtocolTester:
 
             # Create request with this header
             request = self.factory.post("/.well-known/auth")
-            request.META[f'HTTP_{header.upper().replace("-", "_")}'] = "test_value"
+            request.META[f"HTTP_{header.upper().replace('-', '_')}"] = "test_value"
 
             # Check header detection
             detected = any(
                 key.lower().replace("_", "-") == header
-                for key in request.META.keys()
+                for key in request.META
                 if key.startswith("HTTP_")
             )
 
@@ -100,7 +105,9 @@ class BRCProtocolTester:
         # Verify header can be parsed
         try:
             payment_data = json.loads(request.META["HTTP_X_BSV_PAYMENT"])
-            all_fields_present = all(field in payment_data for field in payment_structure.keys())
+            all_fields_present = all(
+                field in payment_data for field in payment_structure
+            )
 
             if all_fields_present:
                 print("   ✅ Valid payment structure detected")
@@ -166,7 +173,7 @@ class BRCProtocolTester:
 
             # Add headers
             for key, value in scenario["headers"].items():
-                request.META[f'HTTP_{key.upper().replace("-", "_")}'] = value
+                request.META[f"HTTP_{key.upper().replace('-', '_')}"] = value
 
             # Execute
             try:
@@ -175,7 +182,9 @@ class BRCProtocolTester:
 
                 # Check required fields
                 missing_fields = [
-                    field for field in scenario["expected_fields"] if field not in response_data
+                    field
+                    for field in scenario["expected_fields"]
+                    if field not in response_data
                 ]
 
                 if not missing_fields:
@@ -184,12 +193,15 @@ class BRCProtocolTester:
                     print(f"      ❌ Missing fields: {missing_fields}")
 
                 # Check BSV headers detection
-                if "headers" in response_data and "bsv_headers" in response_data["headers"]:
+                if (
+                    "headers" in response_data
+                    and "bsv_headers" in response_data["headers"]
+                ):
                     bsv_header_count = len(response_data["headers"]["bsv_headers"])
                     print(f"      📊 BSV headers detected: {bsv_header_count}")
 
             except Exception as e:
-                print(f"      ❌ Error: {str(e)}")
+                print(f"      ❌ Error: {e!s}")
 
         return True
 
@@ -198,7 +210,7 @@ class BRCProtocolTester:
         print("\n⚠️ Testing Error Response Compliance")
         print("-" * 37)
 
-        from myapp.views import protected_endpoint, premium_endpoint
+        from myapp.views import premium_endpoint, protected_endpoint
 
         error_scenarios = [
             {
@@ -228,11 +240,15 @@ class BRCProtocolTester:
 
                 # Check status code
                 status_match = response.status_code == scenario["expected_status"]
-                print(f"      📊 Status: {response.status_code} {'✅' if status_match else '❌'}")
+                print(
+                    f"      📊 Status: {response.status_code} {'✅' if status_match else '❌'}"
+                )
 
                 # Check required fields
                 missing_fields = [
-                    field for field in scenario["expected_fields"] if field not in response_data
+                    field
+                    for field in scenario["expected_fields"]
+                    if field not in response_data
                 ]
 
                 if not missing_fields:
@@ -241,7 +257,7 @@ class BRCProtocolTester:
                     print(f"      ❌ Missing error fields: {missing_fields}")
 
             except Exception as e:
-                print(f"      ❌ Error: {str(e)}")
+                print(f"      ❌ Error: {e!s}")
 
         return True
 
@@ -267,7 +283,7 @@ class BRCProtocolTester:
         print(f"Total Protocol Tests: {total_tests}")
         print(f"Passed: {passed_tests}")
         print(f"Failed: {total_tests - passed_tests}")
-        print(f"Compliance Rate: {(passed_tests/total_tests)*100:.1f}%")
+        print(f"Compliance Rate: {(passed_tests / total_tests) * 100:.1f}%")
 
         if passed_tests == total_tests:
             print("\n🏆 FULL BRC-103/104 PROTOCOL COMPLIANCE ACHIEVED!")
