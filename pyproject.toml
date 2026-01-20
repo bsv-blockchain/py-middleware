@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bsv-middleware"
-version = "2.0.0"
+version = "2.0.1"
 description = "Django middleware for BSV blockchain authentication and payment processing"
 readme = "README.md"
 license = {text = "MIT"}

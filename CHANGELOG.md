@@ -6,21 +6,22 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
-- [2.0.0 - 2026-01-20](#200---2026-01-20)
+- [2.0.1 - 2026-01-20](#201---2026-01-20)
 
 ---
 
-## [2.0.0] - 2026-01-20
+## [2.0.1] - 2026-01-20
 
 > **⚠️ Beta Quality Release**
->
+> 
 > This release implements BRC-100 compliance and is considered **beta quality**.
-> While the version number is `2.0.0`, this is the first release with the new authentication
+> While the version number is `2.0.1`, this is the first release with the new authentication
 > architecture and may contain bugs. Please report any issues.
->
-> This version requires `bsv-sdk>=2.0.0`.
->
+> 
+> This version requires `bsv-sdk>=2.0.0b1`.
+> 
 > **Installation:**
+> 
 > ```bash
 > pip install bsv-middleware
 > ```
@@ -48,3 +49,4 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Requires Django 3.2+ and Python 3.8+
 
 ---
+
