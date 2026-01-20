@@ -6,11 +6,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
-- [2.0.1 - 2026-01-20](#201---2026-01-20)
+- [2.0.2 - 2026-01-20](#202---2026-01-20)
 
 ---
 
-## [2.0.1] - 2026-01-20
+## [2.0.2] - 2026-01-20
 
 > **⚠️ Beta Quality Release**
 > 
@@ -23,8 +23,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > **Installation:**
 > 
 > ```bash
-> pip install bsv-middleware
+> pip install bsv-middleware --pre
 > ```
+> The `--pre` flag is required because this package depends on `bsv-sdk>=2.0.0b1` (beta).
 
 ### Added
 
