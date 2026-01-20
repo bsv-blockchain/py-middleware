@@ -6,22 +6,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
-- [2.0.0b1 - 2026-01-20](#200b1---2026-01-20)
+- [2.0.0 - 2026-01-20](#200---2026-01-20)
 
 ---
 
-## [2.0.0b1] - 2026-01-20
+## [2.0.0] - 2026-01-20
 
-> **⚠️ Beta Release**
+> **⚠️ Beta Quality Release**
 >
-> This is a **beta version** for BRC-100 compliance support.
-> This version requires `bsv-sdk>=2.0.0b1`.
+> This release implements BRC-100 compliance and is considered **beta quality**.
+> While the version number is `2.0.0`, this is the first release with the new authentication
+> architecture and may contain bugs. Please report any issues.
+>
+> This version requires `bsv-sdk>=2.0.0`.
 >
 > **Installation:**
 > ```bash
-> pip install bsv-middleware==2.0.0b1
-> # or to install the latest pre-release version:
-> pip install bsv-middleware --pre
+> pip install bsv-middleware
 > ```
 
 ### Added
@@ -37,7 +38,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Updated dependency to require `bsv-sdk>=2.0.0b1` for BRC-100 compliance
+- Updated dependency to require `bsv-sdk>=2.0.0` for BRC-100 compliance
 - JSON wire formats now use camelCase for cross-SDK compatibility with TypeScript and Go SDKs
 
 ### Notes

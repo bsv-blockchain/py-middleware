@@ -4,20 +4,10 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-middleware)](https://pypi.org/project/bsv-middleware)
 [![Coverage](https://img.shields.io/badge/coverage-12%25-red)](https://github.com/bitcoin-sv/py-middleware/actions/workflows/build.yml)
 
-> ## ⚠️ Beta Version (v2.0.0b1)
+> **🔗 Cross-SDK Interoperability**
 >
-> This is a **beta release** for **BRC-100 compliance** support.
-> This version requires `bsv-sdk>=2.0.0b1`.
->
-> - Cross-SDK interoperability with TypeScript SDK and Go SDK (v2.0.0+)
-> - Compatible with wallet-toolboxes v2.0.0+
->
-> **Installation:**
-> ```bash
-> pip install bsv-middleware==2.0.0b1
-> # or to install the latest pre-release version:
-> pip install bsv-middleware --pre
-> ```
+> This release ensures **cross-SDK interoperability** with [TypeScript SDK](https://github.com/bsv-blockchain/ts-sdk) and [Go SDK](https://github.com/bsv-blockchain/go-sdk) (v2.0.0+).
+> Compatible with [wallet-toolbox](https://github.com/bsv-blockchain/wallet-toolbox) v2.0.0+.
 
 A **Django** middleware that implements **BRC-103** [Peer-to-Peer Mutual Authentication](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0103.md) via **BRC-104** [HTTP Transport](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0104.md). This library makes it easy to **mutually authenticate** and exchange **verifiable certificates** between clients and servers in a standardized way.
 
