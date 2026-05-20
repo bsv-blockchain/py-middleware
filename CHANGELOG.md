@@ -6,7 +6,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.0.3 - 2026-05-20](#203---2026-05-20)
 - [2.0.2 - 2026-01-20](#202---2026-01-20)
+
+---
+
+## [2.0.3] - 2026-05-20
+
+### Changed
+
+- Added Python 3.13 support (tested and verified)
+- Updated dependency to require `bsv-sdk>=2.1.3` (fixes Python 3.13 compatibility)
+- Added Python 3.12 and 3.13 to CI test matrix
+- Added Dependabot configuration for automated dependency updates
+
+### Notes
+
+- Supported Python versions: 3.10, 3.11, 3.12, 3.13
+- The `--pre` flag is no longer required for installation
 
 ---
 

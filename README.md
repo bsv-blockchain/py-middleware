@@ -11,9 +11,9 @@
 >
 > **Installation:**
 > ```bash
-> pip install bsv-middleware --pre
+> pip install bsv-middleware
 > ```
-> The `--pre` flag is required because this package depends on `bsv-sdk>=2.0.0b1` (beta).
+> Requires Python 3.10+ and `bsv-sdk>=2.1.3`.
 
 A **Django** middleware that implements **BRC-103** [Peer-to-Peer Mutual Authentication](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0103.md) via **BRC-104** [HTTP Transport](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0104.md). This library makes it easy to **mutually authenticate** and exchange **verifiable certificates** between clients and servers in a standardized way.
 
@@ -78,7 +78,7 @@ By layering **BRC-103** on top of Django, you can:
 pip install bsv-middleware
 ```
 
-This package depends on [Django](https://www.djangoproject.com/) (3.2+ or 4.x) and a BRC-100–capable wallet (e.g., the `bsv-sdk` implementation or your own code).
+This package depends on [Django](https://www.djangoproject.com/) (3.2+ or 4.x), Python 3.10+, and `bsv-sdk>=2.1.3`.
 
 ---
 
