@@ -66,6 +66,7 @@ jobs:
 
     - name: Update coverage badge
       if: matrix.python-version == '3.11'
+      continue-on-error: true
       run: |
         python update_coverage.py ${{ steps.coverage.outputs.coverage }}
 

@@ -32,16 +32,15 @@ def update_readme_coverage(coverage_percentage: str):
         color = "red"
 
     # Update the coverage badge at the top (link-wrapped format)
-    badge_pattern = (
-        r"\[!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[\d.]+%25-[a-z-]+\)\]\([^)]+\)"
-    )
+    # Match both %25 (URL-encoded) and % (literal) variants
+    badge_pattern = r"\[!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[\d.]+(?:%25|%)-[a-z-]+\)\]\([^)]+\)"
     new_badge = f"[![Coverage](https://img.shields.io/badge/coverage-{coverage_percentage}%25-{color})](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml)"
 
     new_content = re.sub(badge_pattern, new_badge, content)
     if new_content == content:
         print("Warning: Coverage badge pattern not found in README")
-        return False
-    content = new_content
+    else:
+        content = new_content
 
     # Update the coverage percentage in the Testing & Quality section (if present)
     coverage_text_pattern = r"\*\*(\d+(?:\.\d+)?)%\+ code coverage\*\* across the entire codebase"
