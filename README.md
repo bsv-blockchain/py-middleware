@@ -2,7 +2,7 @@
 [![build](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml)
 [![PyPI version](https://img.shields.io/pypi/v/bsv-middleware)](https://pypi.org/project/bsv-middleware)
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-middleware)](https://pypi.org/project/bsv-middleware)
-[![Coverage](https://img.shields.io/badge/coverage-12%25-red)](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml)
+[![Coverage](https://img.shields.io/badge/coverage-12.5%25-red)](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml)
 
 > **🔗 Cross-SDK Interoperability**
 >
