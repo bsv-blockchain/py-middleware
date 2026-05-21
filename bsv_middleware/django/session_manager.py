@@ -53,7 +53,7 @@ class DjangoSessionManager:
             return False
 
     def create_session(
-        self, identity_key: PubKeyHex, auth_data: Optional[Dict[str, Any]] = None
+        self, identity_key: PubKeyHex, auth_data: Optional[dict[str, Any]] = None
     ) -> None:
         """
         Create a new BSV session for the given identity key.
@@ -79,7 +79,7 @@ class DjangoSessionManager:
             logger.error(f"Failed to create session for {identity_key}: {e}")
             raise
 
-    def get_session(self, identity_key: PubKeyHex) -> Optional[Dict[str, Any]]:
+    def get_session(self, identity_key: PubKeyHex) -> Optional[dict[str, Any]]:
         """
         Get the BSV session data for the given identity key.
 
@@ -91,13 +91,13 @@ class DjangoSessionManager:
         """
         try:
             session_key = f"{self._bsv_session_prefix}{identity_key}"
-            result: Optional[Dict[str, Any]] = self.session.get(session_key)
+            result: Optional[dict[str, Any]] = self.session.get(session_key)
             return result
         except Exception as e:
             logger.error(f"Failed to get session for {identity_key}: {e}")
             return None
 
-    def update_session(self, identity_key: PubKeyHex, auth_data: Dict[str, Any]) -> None:
+    def update_session(self, identity_key: PubKeyHex, auth_data: dict[str, Any]) -> None:
         """
         Update the BSV session data for the given identity key.
 

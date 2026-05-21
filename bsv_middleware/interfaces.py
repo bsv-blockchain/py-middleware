@@ -202,7 +202,7 @@ class RequestInterface(Protocol):
         ...
 
     @property
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> dict[str, str]:
         """Request headers"""
         ...
 
@@ -243,7 +243,7 @@ class ResponseInterface(Protocol):
 
 
 # Type aliases for convenience
-CertificateCallback = Callable[[str, List[Any], Any, Any], None]
+CertificateCallback = Callable[[str, list[Any], Any, Any], None]
 PriceCalculationCallback = Callable[[Any], int]
 AuthCallback = Callable[[Any, Any], Optional[Exception]]
 

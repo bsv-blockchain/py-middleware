@@ -31,7 +31,7 @@ class PaymentTestScenario:
     name: str
     endpoint: str
     required_payment: int
-    headers: Dict[str, str]
+    headers: dict[str, str]
     expected_status: int
     should_process_payment: bool = False
 
@@ -96,7 +96,7 @@ class BSVPaymentFlowTester:
                         "error": f"Insufficient payment: {actual_satoshis} < {expected_satoshis}",
                     }
 
-            def get_processed_payments(self) -> List[dict]:
+            def get_processed_payments(self) -> list[dict]:
                 return self.processed_payments.copy()
 
         return PaymentTestWallet()
@@ -138,7 +138,7 @@ class BSVPaymentFlowTester:
             }
         )
 
-    def get_payment_test_scenarios(self) -> List[PaymentTestScenario]:
+    def get_payment_test_scenarios(self) -> list[PaymentTestScenario]:
         """Get comprehensive payment test scenarios"""
         return [
             # Valid payment scenarios
@@ -222,7 +222,7 @@ class BSVPaymentFlowTester:
             ),
         ]
 
-    def test_payment_scenario(self, scenario: PaymentTestScenario) -> Dict[str, Any]:
+    def test_payment_scenario(self, scenario: PaymentTestScenario) -> dict[str, Any]:
         """Test a specific payment scenario"""
         print(f"\n💰 Payment Test: {scenario.name}")
 
@@ -345,7 +345,7 @@ class BSVPaymentFlowTester:
             self.test_results.append(error_result)
             return error_result
 
-    def test_payment_calculation(self) -> Dict[str, Any]:
+    def test_payment_calculation(self) -> dict[str, Any]:
         """Test payment price calculation"""
         print("\n💲 Testing Payment Calculation")
 
@@ -385,7 +385,7 @@ class BSVPaymentFlowTester:
 
         return {"calculation_tests": results}
 
-    def run_all_payment_tests(self) -> Dict[str, Any]:
+    def run_all_payment_tests(self) -> dict[str, Any]:
         """Run all payment flow tests"""
         print("💰 Starting BSV Payment Flow Tests")
         print("=" * 60)

@@ -29,8 +29,8 @@ class AuthTestScenario:
 
     name: str
     step: str
-    headers: Dict[str, str]
-    payload: Dict[str, Any]
+    headers: dict[str, str]
+    payload: dict[str, Any]
     expected_status: int
     expected_response_type: str
     should_have_session: bool = False
@@ -74,7 +74,7 @@ class BSVAuthFlowTester:
 
         return AuthTestWallet()
 
-    def get_auth_test_scenarios(self) -> List[AuthTestScenario]:
+    def get_auth_test_scenarios(self) -> list[AuthTestScenario]:
         """Get comprehensive auth test scenarios"""
         return [
             # Step 1: Initial auth request
@@ -177,7 +177,7 @@ class BSVAuthFlowTester:
             ),
         ]
 
-    def test_well_known_auth_endpoint(self, scenario: AuthTestScenario) -> Dict[str, Any]:
+    def test_well_known_auth_endpoint(self, scenario: AuthTestScenario) -> dict[str, Any]:
         """Test /.well-known/auth endpoint with specific scenario"""
         print(f"\n🔐 Auth Test: {scenario.name}")
 
@@ -247,7 +247,7 @@ class BSVAuthFlowTester:
             self.test_results.append(error_result)
             return error_result
 
-    def test_nonce_functionality(self) -> Dict[str, Any]:
+    def test_nonce_functionality(self) -> dict[str, Any]:
         """Test nonce creation and verification"""
         print("\n🎲 Testing Nonce Functionality")
 
@@ -323,7 +323,7 @@ class BSVAuthFlowTester:
 
         return results
 
-    def run_all_auth_tests(self) -> Dict[str, Any]:
+    def run_all_auth_tests(self) -> dict[str, Any]:
         """Run all authentication flow tests"""
         print("🔐 Starting BSV Authentication Flow Tests")
         print("=" * 60)

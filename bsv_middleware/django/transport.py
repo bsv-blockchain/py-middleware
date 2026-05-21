@@ -71,16 +71,16 @@ class DjangoTransport(Transport):
         self.peer = None  # Will be set by auth_middleware
 
         # Storage for open handles (equivalent to Express implementation)
-        self.open_non_general_handles: Dict[str, List[Dict[str, Any]]] = {}
-        self.open_general_handles: Dict[str, Dict[str, Any]] = {}
+        self.open_non_general_handles: dict[str, list[dict[str, Any]]] = {}
+        self.open_general_handles: dict[str, dict[str, Any]] = {}
 
         # Message callback (equivalent to Express onData callback)
         self.message_callback: Optional[Callable[..., Any]] = None
 
         # Certificate handling (Phase 2.6: Express compatibility)
         self.on_certificates_received: Optional[CertificatesReceivedCallback] = None
-        self._certificate_listener_ids: Dict[str, int] = {}  # identity_key -> listener_id
-        self.open_next_handlers: Dict[str, Callable] = {}  # For continuation after cert receipt
+        self._certificate_listener_ids: dict[str, int] = {}  # identity_key -> listener_id
+        self.open_next_handlers: dict[str, Callable] = {}  # For continuation after cert receipt
 
     def set_peer(self, peer: Any) -> None:
         """
@@ -331,7 +331,7 @@ class DjangoTransport(Transport):
                 except (ValueError, TypeError):
                     signature_array = []
 
-            response_data: Dict[str, Any] = {
+            response_data: dict[str, Any] = {
                 "status": "success",
                 "messageType": getattr(
                     message,
@@ -433,7 +433,7 @@ class DjangoTransport(Transport):
         except Exception as e:
             return Exception(f"Failed to send general message: {e!s}")
 
-    def _build_auth_response_headers(self, message: Any) -> Dict[str, str]:
+    def _build_auth_response_headers(self, message: Any) -> dict[str, str]:
         """
         Build BRC-104 compliant authentication headers.
 
@@ -535,8 +535,8 @@ class DjangoTransport(Transport):
             return response
 
     def _parse_general_message_payload(
-        self, payload: List[int]
-    ) -> tuple[int, Dict[str, str], List[int]]:
+        self, payload: list[int]
+    ) -> tuple[int, dict[str, str], list[int]]:
         """
         Parse general message payload to extract status, headers, and body.
 
@@ -545,12 +545,12 @@ class DjangoTransport(Transport):
         # Simple implementation - in real Express, this uses Utils.Reader
         # For now, return default values
         status_code = 200
-        headers: Dict[str, str] = {}
+        headers: dict[str, str] = {}
         body = payload if payload else []
 
         return status_code, headers, body
 
-    def _message_to_dict(self, message: Any) -> Dict[str, Any]:
+    def _message_to_dict(self, message: Any) -> dict[str, Any]:
         """Convert AuthMessage to dictionary for JSON serialization."""
         result = {}
         for attr in [
@@ -1347,7 +1347,7 @@ class DjangoTransport(Transport):
             )
             return "error"
 
-    def _validate_certificates(self, certificates) -> List[Any]:
+    def _validate_certificates(self, certificates) -> list[Any]:
         """
         Validate received certificates.
 
@@ -1406,7 +1406,7 @@ class DjangoTransport(Transport):
             return False
 
     def _handle_certificate_processing_complete(
-        self, identity_key: str, certificates: List[Any]
+        self, identity_key: str, certificates: list[Any]
     ) -> None:
         """
         Handle completion of certificate processing.
@@ -1475,7 +1475,7 @@ class DjangoTransport(Transport):
         except Exception as e:
             self._log("error", f"Error cleaning up certificate handles: {e}")
 
-    def _handle_belongs_to_identity(self, handle: Dict[str, Any], identity_key: str) -> bool:
+    def _handle_belongs_to_identity(self, handle: dict[str, Any], identity_key: str) -> bool:
         """Check if handle belongs to specific identity key."""
         try:
             request = handle.get("request")
@@ -1847,7 +1847,7 @@ class DjangoTransport(Transport):
             self._log("error", f"Failed to build AuthMessage from request: {e}")
             raise BSVAuthException(f"Invalid auth request format: {e!s}")
 
-    def _dict_to_auth_message(self, message_data: Dict[str, Any]) -> Any:
+    def _dict_to_auth_message(self, message_data: dict[str, Any]) -> Any:
         """
         Convert dictionary to py-sdk AuthMessage object.
 
@@ -1939,13 +1939,13 @@ class DjangoTransport(Transport):
 
             # Fallback to simple object
             class SimpleAuthMessage:
-                def __init__(self, data: Dict[str, Any]):
+                def __init__(self, data: dict[str, Any]):
                     for key, value in data.items():
                         setattr(self, key, value)
 
             return SimpleAuthMessage(message_data)
 
-    def _log(self, level: str, message: str, data: Optional[Dict[str, Any]] = None) -> None:
+    def _log(self, level: str, message: str, data: Optional[dict[str, Any]] = None) -> None:
         """
         Log a message at the specified level with optional data.
 
@@ -2083,7 +2083,7 @@ class DjangoTransport(Transport):
                 return None
 
             # Define the certificate callback
-            def certificate_callback(sender_public_key: str, certificates: List[Any]) -> None:
+            def certificate_callback(sender_public_key: str, certificates: list[Any]) -> None:
                 """
                 Callback invoked when certificates are received.
 

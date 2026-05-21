@@ -46,7 +46,7 @@ class AuthInfo:
     """Authentication information for BSV requests"""
 
     identity_key: str = "unknown"
-    certificates: Optional[List[Any]] = None
+    certificates: Optional[list[Any]] = None
 
     @property
     def is_authenticated(self) -> bool:
@@ -114,7 +114,7 @@ class WalletInterface(Protocol):
         """Get the wallet's public key"""
         ...
 
-    def internalize_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
+    def internalize_action(self, action: dict[str, Any]) -> dict[str, Any]:
         """Process an action (transaction) with the wallet"""
         ...
 
@@ -128,9 +128,9 @@ class SessionManagerInterface(Protocol):
 
 
 # Type aliases for callbacks
-CertificatesReceivedCallback = Callable[[str, List[Any], HttpRequest, HttpResponse], None]
+CertificatesReceivedCallback = Callable[[str, list[Any], HttpRequest, HttpResponse], None]
 
-CalculateRequestPriceCallback = Callable[[HttpRequest], Union[int, float]]
+CalculateRequestPriceCallback = Callable[[HttpRequest], int | float]
 
 
 @dataclass
@@ -140,7 +140,7 @@ class AuthMiddlewareOptions:
     wallet: WalletInterface
     session_manager: Optional[SessionManagerInterface] = None
     allow_unauthenticated: bool = False
-    certificates_to_request: Optional[Dict[str, Any]] = None
+    certificates_to_request: Optional[dict[str, Any]] = None
     on_certificates_received: Optional[CertificatesReceivedCallback] = None
     logger: Optional[Any] = None
     log_level: LogLevel = LogLevel.INFO

@@ -88,21 +88,21 @@ class TestIssue5RuntimeCheckable:
         # Create a wallet with all required methods
         class CompleteWallet:
             def get_public_key(
-                self, args: Dict[str, Any], originator: Optional[str] = None
-            ) -> Dict:
+                self, args: dict[str, Any], originator: Optional[str] = None
+            ) -> dict:
                 return {"publicKey": "test"}
 
             def create_signature(
-                self, args: Dict[str, Any], originator: Optional[str] = None
-            ) -> Dict:
+                self, args: dict[str, Any], originator: Optional[str] = None
+            ) -> dict:
                 return {"signature": []}
 
-            def create_action(self, args: Dict[str, Any], originator: Optional[str] = None) -> Dict:
+            def create_action(self, args: dict[str, Any], originator: Optional[str] = None) -> dict:
                 return {}
 
             def internalize_action(
-                self, args: Dict[str, Any], originator: Optional[str] = None
-            ) -> Dict:
+                self, args: dict[str, Any], originator: Optional[str] = None
+            ) -> dict:
                 return {}
 
         # Create an incomplete wallet (missing methods)

@@ -47,7 +47,7 @@ class MiddlewareWalletAdapter(WalletInterface):
 
     # === Core methods used by middleware ===
 
-    def get_public_key(self, args: Dict[str, Any], originator: str) -> Any:
+    def get_public_key(self, args: dict[str, Any], originator: str) -> Any:
         """
         py-sdk format: get_public_key(args, originator)
         simple format: get_public_key() -> str
@@ -92,7 +92,7 @@ class MiddlewareWalletAdapter(WalletInterface):
             logger.error(f"get_public_key error: {e}")
             raise
 
-    def create_signature(self, args: Dict[str, Any], originator: str) -> Any:
+    def create_signature(self, args: dict[str, Any], originator: str) -> Any:
         """
         py-sdk format: create_signature(args, originator)
         simple format: sign_message(message: bytes) -> bytes
@@ -165,7 +165,7 @@ class MiddlewareWalletAdapter(WalletInterface):
             traceback.print_exc()
             raise
 
-    def internalize_action(self, args: Dict[str, Any], originator: str) -> Any:
+    def internalize_action(self, args: dict[str, Any], originator: str) -> Any:
         """
         py-sdk format: internalize_action(args, originator)
         simple format: internalize_action(action: dict) -> dict
@@ -197,97 +197,97 @@ class MiddlewareWalletAdapter(WalletInterface):
 
     # === Other required abstract methods (basic implementations) ===
 
-    def encrypt(self, args: Dict[str, Any], originator: str) -> Any:
+    def encrypt(self, args: dict[str, Any], originator: str) -> Any:
         """Encryption - not implemented in simple wallet"""
         logger.warning("encrypt method called but not implemented in simple wallet")
         raise NotImplementedError("encrypt not implemented in simple wallet")
 
-    def decrypt(self, args: Dict[str, Any], originator: str) -> Any:
+    def decrypt(self, args: dict[str, Any], originator: str) -> Any:
         """Decryption - not implemented in simple wallet"""
         logger.warning("decrypt method called but not implemented in simple wallet")
         raise NotImplementedError("decrypt not implemented in simple wallet")
 
-    def create_hmac(self, args: Dict[str, Any], originator: str) -> Any:
+    def create_hmac(self, args: dict[str, Any], originator: str) -> Any:
         """HMAC creation - using signature as fallback"""
         logger.warning("create_hmac called, using signature instead")
         return self.create_signature(args, originator)
 
-    def verify_hmac(self, args: Dict[str, Any], originator: str) -> Any:
+    def verify_hmac(self, args: dict[str, Any], originator: str) -> Any:
         """HMAC verification - simplified implementation"""
         logger.warning("verify_hmac called, returning True (simplified)")
         return {"valid": True}
 
-    def verify_signature(self, args: Dict[str, Any], originator: str) -> Any:
+    def verify_signature(self, args: dict[str, Any], originator: str) -> Any:
         """Signature verification - simplified implementation"""
         logger.debug("verify_signature called")
         return {"valid": True}
 
     # === Wallet operation methods ===
 
-    def create_action(self, args: Dict[str, Any], originator: str) -> Any:
+    def create_action(self, args: dict[str, Any], originator: str) -> Any:
         """Action creation - simplified implementation"""
         logger.debug(f"create_action: args={args}")
         return {"action": args, "status": "created", "actionId": "mock_action_id"}
 
-    def sign_action(self, args: Dict[str, Any], originator: str) -> Any:
+    def sign_action(self, args: dict[str, Any], originator: str) -> Any:
         """Action signing - simplified implementation"""
         logger.debug(f"sign_action: args={args}")
         return {"signed": True, "actionId": args.get("actionId", "unknown")}
 
-    def abort_action(self, args: Dict[str, Any], originator: str) -> Any:
+    def abort_action(self, args: dict[str, Any], originator: str) -> Any:
         """Action abort - simplified implementation"""
         logger.debug(f"abort_action: args={args}")
         return {"aborted": True}
 
-    def list_actions(self, args: Dict[str, Any], originator: str) -> Any:
+    def list_actions(self, args: dict[str, Any], originator: str) -> Any:
         """List actions - returns empty list"""
         return {"actions": []}
 
-    def list_outputs(self, args: Dict[str, Any], originator: str) -> Any:
+    def list_outputs(self, args: dict[str, Any], originator: str) -> Any:
         """List outputs - returns empty list"""
         return {"outputs": []}
 
-    def relinquish_output(self, args: Dict[str, Any], originator: str) -> Any:
+    def relinquish_output(self, args: dict[str, Any], originator: str) -> Any:
         """Relinquish output - simplified implementation"""
         return {"relinquished": True}
 
     # === Key-related methods ===
 
-    def reveal_counterparty_key_linkage(self, args: Dict[str, Any], originator: str) -> Any:
+    def reveal_counterparty_key_linkage(self, args: dict[str, Any], originator: str) -> Any:
         """Reveal counterparty key linkage - not implemented"""
         raise NotImplementedError("reveal_counterparty_key_linkage not implemented")
 
-    def reveal_specific_key_linkage(self, args: Dict[str, Any], originator: str) -> Any:
+    def reveal_specific_key_linkage(self, args: dict[str, Any], originator: str) -> Any:
         """Reveal specific key linkage - not implemented"""
         raise NotImplementedError("reveal_specific_key_linkage not implemented")
 
     # === Certificate-related methods ===
 
-    def acquire_certificate(self, args: Dict[str, Any], originator: str) -> Any:
+    def acquire_certificate(self, args: dict[str, Any], originator: str) -> Any:
         """Acquire certificate - not implemented"""
         logger.warning("acquire_certificate called but not implemented")
         return {"certificate": None}
 
-    def list_certificates(self, args: Dict[str, Any], originator: str) -> Any:
+    def list_certificates(self, args: dict[str, Any], originator: str) -> Any:
         """List certificates - returns empty list"""
         return {"certificates": []}
 
-    def prove_certificate(self, args: Dict[str, Any], originator: str) -> Any:
+    def prove_certificate(self, args: dict[str, Any], originator: str) -> Any:
         """Prove certificate - simplified implementation"""
         return {"proof": "mock_proof"}
 
-    def relinquish_certificate(self, args: Dict[str, Any], originator: str) -> Any:
+    def relinquish_certificate(self, args: dict[str, Any], originator: str) -> Any:
         """Relinquish certificate - simplified implementation"""
         return {"relinquished": True}
 
     # === Discovery methods ===
 
-    def discover_by_identity_key(self, args: Dict[str, Any], originator: str) -> Any:
+    def discover_by_identity_key(self, args: dict[str, Any], originator: str) -> Any:
         """Discover by identity key - simplified implementation"""
         identity_key = args.get("identityKey", "unknown")
         return {"found": False, "identityKey": identity_key}
 
-    def discover_by_attributes(self, args: Dict[str, Any], originator: str) -> Any:
+    def discover_by_attributes(self, args: dict[str, Any], originator: str) -> Any:
         """Discover by attributes - simplified implementation"""
         return {"found": False, "attributes": args.get("attributes", {})}
 
@@ -307,7 +307,7 @@ class MiddlewareWalletAdapter(WalletInterface):
         """Get block height - returns mock value"""
         return {"height": 800000}
 
-    def get_header_for_height(self, args: Dict[str, Any], originator: str) -> Any:
+    def get_header_for_height(self, args: dict[str, Any], originator: str) -> Any:
         """Get header for specific height - returns mock value"""
         height = args.get("height", 800000)
         return {"height": height, "header": "mock_header_data"}
@@ -331,7 +331,7 @@ class ProtoWalletAdapter:
         self.wallet_impl = wallet_impl
         logger.debug("Created ProtoWalletAdapter")
 
-    def get_public_key(self, args: Dict[str, Any], originator: str) -> Any:
+    def get_public_key(self, args: dict[str, Any], originator: str) -> Any:
         """Convert ProtoWallet Dict response to object with public_key attribute."""
         result = self.wallet_impl.get_public_key(args, originator)
 
@@ -355,7 +355,7 @@ class ProtoWalletAdapter:
 
         return result
 
-    def create_signature(self, args: Dict[str, Any], originator: str) -> Any:
+    def create_signature(self, args: dict[str, Any], originator: str) -> Any:
         """
         Convert ProtoWallet Dict response to object with signature attribute.
         Transforms nested encryption_args structure to BRC-100 compliant flat structure.
@@ -439,7 +439,7 @@ class ProtoWalletAdapter:
 
         return result
 
-    def verify_signature(self, args: Dict[str, Any], originator: str) -> Any:
+    def verify_signature(self, args: dict[str, Any], originator: str) -> Any:
         """
         Normalize verify_signature arguments to BRC-100 compliant flat structure.
         Handles BOTH nested encryption_args format AND flat py-sdk format.
@@ -582,7 +582,7 @@ class ProtoWalletAdapter:
 
         return result
 
-    def create_hmac(self, args: Dict[str, Any], originator: str) -> Any:
+    def create_hmac(self, args: dict[str, Any], originator: str) -> Any:
         """
         Delegate create_hmac to underlying wallet_impl (ProtoWallet).
 
@@ -609,7 +609,7 @@ class ProtoWalletAdapter:
 
         return result
 
-    def verify_hmac(self, args: Dict[str, Any], originator: str) -> Any:
+    def verify_hmac(self, args: dict[str, Any], originator: str) -> Any:
         """
         Delegate verify_hmac to underlying wallet_impl (ProtoWallet).
 

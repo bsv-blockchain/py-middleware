@@ -225,7 +225,7 @@ class PySdkBridge:
             logger.error(f"Nonce verification error: {e}")
             return False
 
-    def internalize_action(self, payment_data: BSVPayment) -> Dict[str, Any]:
+    def internalize_action(self, payment_data: BSVPayment) -> dict[str, Any]:
         """
         Process a payment action through the wallet.
 

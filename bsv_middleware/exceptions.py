@@ -23,7 +23,7 @@ class BSVMiddlewareException(Exception):
         message: str,
         code: str,
         status_code: int = 500,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(message)
         self.message = message
@@ -40,7 +40,7 @@ class BSVAuthException(BSVMiddlewareException):
         message: str = "Authentication failed",
         code: str = ERR_INVALID_AUTH,
         status_code: int = 401,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(message, code, status_code, details)
 
@@ -53,7 +53,7 @@ class BSVPaymentException(BSVMiddlewareException):
         message: str = "Payment required",
         code: str = ERR_PAYMENT_REQUIRED,
         status_code: int = 402,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(message, code, status_code, details)
 
@@ -66,7 +66,7 @@ class BSVPaymentRequiredException(BSVPaymentException):
         satoshis_required: int,
         derivation_prefix: str,
         message: str = "A BSV payment is required to complete this request",
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         payment_details = {
             "satoshisRequired": satoshis_required,
@@ -89,7 +89,7 @@ class BSVMalformedPaymentException(BSVPaymentException):
     def __init__(
         self,
         message: str = "The X-BSV-Payment header is not valid JSON",
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(
             message=message,
@@ -105,7 +105,7 @@ class BSVInvalidDerivationPrefixException(BSVPaymentException):
     def __init__(
         self,
         message: str = "The X-BSV-Payment-Derivation-Prefix header is not valid",
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(
             message=message,
@@ -121,7 +121,7 @@ class BSVServerMisconfiguredException(BSVMiddlewareException):
     def __init__(
         self,
         message: str = "The server is misconfigured",
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(
             message=message,

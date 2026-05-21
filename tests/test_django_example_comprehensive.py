@@ -38,10 +38,10 @@ class APITestCase:
     name: str
     endpoint: str
     method: str = "GET"
-    headers: Dict[str, str] = None
-    data: Dict[str, Any] = None
+    headers: dict[str, str] = None
+    data: dict[str, Any] = None
     expected_status: int = 200
-    expected_fields: List[str] = None
+    expected_fields: list[str] = None
     auth_required: bool = False
     payment_required: int = 0
 
@@ -66,7 +66,7 @@ class ComprehensiveAPITester:
         self.test_results = []
         self.failed_tests = []
 
-    def create_bsv_headers(self, bsv_headers: BSVHeaders) -> Dict[str, str]:
+    def create_bsv_headers(self, bsv_headers: BSVHeaders) -> dict[str, str]:
         """Create BSV protocol headers"""
         headers = {
             "x-bsv-auth-version": bsv_headers.auth_version,
@@ -90,7 +90,7 @@ class ComprehensiveAPITester:
             }
         )
 
-    def execute_test_case(self, test_case: APITestCase) -> Dict[str, Any]:
+    def execute_test_case(self, test_case: APITestCase) -> dict[str, Any]:
         """Execute a single test case"""
         print(f"\n🧪 Testing: {test_case.name}")
 
@@ -180,7 +180,7 @@ class ComprehensiveAPITester:
 class EndpointCoverageTester(ComprehensiveAPITester):
     """Test all endpoints comprehensively"""
 
-    def get_test_cases(self) -> List[APITestCase]:
+    def get_test_cases(self) -> list[APITestCase]:
         """Define all endpoint test cases"""
         return [
             # Free endpoints
@@ -259,7 +259,7 @@ class EndpointCoverageTester(ComprehensiveAPITester):
             ),
         ]
 
-    def run_all_tests(self) -> Dict[str, Any]:
+    def run_all_tests(self) -> dict[str, Any]:
         """Run all endpoint coverage tests"""
         print("🚀 Starting Endpoint Coverage Tests")
         print("=" * 50)

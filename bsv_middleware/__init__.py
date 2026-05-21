@@ -14,7 +14,7 @@ For Django integration, see: examples/django_example/adapter/
 For FastAPI integration (future), see: examples/fastapi_example/fastapi_adapter/
 """
 
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 __author__ = "BSV Middleware Team"
 __email__ = "team@bsv-middleware.com"
 
