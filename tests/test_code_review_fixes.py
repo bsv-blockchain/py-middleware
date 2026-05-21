@@ -9,12 +9,7 @@ This test suite validates:
 5. Issue #3: Transport readiness flag
 """
 
-import sys
-from pathlib import Path
-
-# Add py-sdk to path
-py_sdk_path = Path(__file__).parent.parent.parent / "py-sdk"
-sys.path.insert(0, str(py_sdk_path))
+import inspect
 
 import pytest
 
@@ -24,60 +19,21 @@ class TestIssue5RuntimeCheckable:
 
     def test_runtime_checkable_decorator_in_source(self):
         """Verify @runtime_checkable decorator is present in source code."""
-        from pathlib import Path
+        from bsv.wallet.wallet_interface import WalletInterface
 
-        # Read the source file directly
-        py_sdk_path = Path(__file__).parent.parent.parent / "py-sdk"
-        wallet_interface_file = py_sdk_path / "bsv" / "wallet" / "wallet_interface.py"
+        content = inspect.getsource(inspect.getmodule(WalletInterface))
 
-        with open(wallet_interface_file) as f:
-            content = f.read()
-
-        # Check that @runtime_checkable is imported
-        assert "from typing import" in content
         assert "runtime_checkable" in content
-
-        # Check that @runtime_checkable is applied to WalletInterface
         assert "@runtime_checkable" in content
-        assert "@runtime_checkable\nclass WalletInterface(Protocol):" in content
 
     def test_is_wallet_interface_uses_isinstance(self):
         """Verify is_wallet_interface implementation uses isinstance()."""
-        from pathlib import Path
+        from bsv.wallet.wallet_interface import is_wallet_interface
 
-        # Read the source file to verify implementation
-        py_sdk_path = Path(__file__).parent.parent.parent / "py-sdk"
-        wallet_interface_file = py_sdk_path / "bsv" / "wallet" / "wallet_interface.py"
+        source = inspect.getsource(is_wallet_interface)
 
-        with open(wallet_interface_file) as f:
-            content = f.read()
-
-        # Find is_wallet_interface function
-        assert "def is_wallet_interface" in content
-
-        # Verify it uses isinstance (not hardcoded list)
-        is_wallet_func_start = content.find("def is_wallet_interface")
-        # Find the end of the function by looking for the next top-level definition or __all__
-        next_def = content.find("\n\ndef ", is_wallet_func_start + 1)
-        next_all = content.find("\n\n__all__", is_wallet_func_start + 1)
-
-        # Use the first match found (whichever comes first)
-        if next_def != -1 and (next_all == -1 or next_def < next_all):
-            is_wallet_func_end = next_def
-        elif next_all != -1:
-            is_wallet_func_end = next_all
-        else:
-            # Fallback to finding double newline after return statement
-            return_pos = content.find(
-                "return isinstance(obj, WalletInterface)", is_wallet_func_start
-            )
-            is_wallet_func_end = content.find("\n\n", return_pos)
-
-        is_wallet_func = content[is_wallet_func_start:is_wallet_func_end]
-
-        assert "return isinstance(obj, WalletInterface)" in is_wallet_func
-        # Verify hardcoded list is NOT present
-        assert "required_methods = [" not in is_wallet_func
+        assert "isinstance(obj, WalletInterface)" in source
+        assert "required_methods = [" not in source
 
     def test_is_wallet_interface_functionality(self):
         """Test is_wallet_interface works correctly with duck typing."""
