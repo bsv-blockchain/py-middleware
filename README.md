@@ -1,8 +1,8 @@
 # bsv-middleware
-[![build](https://github.com/bitcoin-sv/py-middleware/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bitcoin-sv/py-middleware/actions/workflows/build.yml)
+[![build](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml)
 [![PyPI version](https://img.shields.io/pypi/v/bsv-middleware)](https://pypi.org/project/bsv-middleware)
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-middleware)](https://pypi.org/project/bsv-middleware)
-[![Coverage](https://img.shields.io/badge/coverage-12%25-red)](https://github.com/bitcoin-sv/py-middleware/actions/workflows/build.yml)
+[![Coverage](https://img.shields.io/badge/coverage-12%25-red)](https://github.com/bsv-blockchain/py-middleware/actions/workflows/build.yml)
 
 > **🔗 Cross-SDK Interoperability**
 >
@@ -357,5 +357,5 @@ See the [examples/django_example](./examples/django_example) directory for a com
 
 ---
 
-**Happy hacking!** If you have questions, suggestions, or want to contribute improvements, feel free to open an issue or PR in our [repository](https://github.com/bitcoin-sv/py-middleware).
+**Happy hacking!** If you have questions, suggestions, or want to contribute improvements, feel free to open an issue or PR in our [repository](https://github.com/bsv-blockchain/py-middleware).
 
