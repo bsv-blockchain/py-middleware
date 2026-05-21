@@ -60,7 +60,7 @@ jobs:
       id: coverage
       run: |
         # Extract coverage percentage from coverage.json
-        COVERAGE=$(python -c "import json; data=json.load(open(\'coverage.json\')); print(f\"{data[\'totals\'][\'percent_covered\']:.1f}\")")
+        COVERAGE=$(python -c "import json; data=json.load(open('coverage.json')); print(f\"{data['totals']['percent_covered']:.1f}\")")
         echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
         echo "Coverage: $COVERAGE%"
 
