@@ -353,7 +353,7 @@ See the [examples/django_example](./examples/django_example) directory for a com
 
 ## License
 
-[Open BSV License](./LICENSE.txt)
+[Apache License 2.0](LICENSE)
 
 ---
 

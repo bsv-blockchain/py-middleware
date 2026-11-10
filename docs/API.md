@@ -507,7 +507,7 @@ class LogLevel(str, Enum):
 
 ## License
 
-[Open BSV License](../LICENSE.txt)
+[Apache License 2.0](../LICENSE)
 
 ---
 
