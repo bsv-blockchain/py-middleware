@@ -143,7 +143,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](../CONTRIBUTING.md) for g
 
 ## 📄 License
 
-[Open BSV License](../LICENSE.txt)
+[Apache License 2.0](../LICENSE)
 
 ---
 
