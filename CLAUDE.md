@@ -18,7 +18,7 @@
 
 ## Dependencies
 
-- `bsv-sdk>=2.4.0`
+- `bsv-sdk>=2.5.0`
 - `django>=3.2.0,<5.0.0`
 
 ## Testing
